@@ -1,0 +1,2825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MaintiTrack Pro - Maintenance Stock & Usage Dashboard</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- SheetJS for Excel Reading -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.6);
+    }
+    .modal-backdrop {
+      background-color: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(5px);
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-800/90 border-b border-slate-700/80 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo & Title -->
+        <div class="flex items-center space-x-3">
+          <div class="bg-gradient-to-tr from-cyan-500 to-blue-600 p-2.5 rounded-xl shadow-lg shadow-cyan-500/20 text-white">
+            <i class="fa-solid fa-boxes-packing text-xl"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg font-bold text-white tracking-wide">MaintiTrack Pro</h1>
+              <span class="bg-cyan-500/20 text-cyan-300 text-xs px-2 py-0.5 rounded-full font-medium border border-cyan-500/30">Maintenance Hub</span>
+              <!-- Live Real-Time Database Status Badge -->
+              <span id="db-status-badge" class="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1 transition-all">
+                <i class="fa-solid fa-spinner fa-spin text-[10px]"></i> Connecting DB...
+              </span>
+            </div>
+            <p class="text-xs text-slate-400">Spare Parts, Issuing, Cupboard & Rack Tracking</p>
+          </div>
+        </div>
+
+        <!-- Quick Action Buttons -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Global SKU & Machine Quick Search Input -->
+          <div class="relative hidden md:block w-48 lg:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="global-sku-machine-search" oninput="handleGlobalSearch(this.value)" placeholder="Quick SKU or Machine search..." class="w-full bg-slate-900/90 border border-slate-700/80 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500 transition-all">
+          </div>
+
+          <button onclick="openModal('issueModal')" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 transform active:scale-95">
+            <i class="fa-solid fa-hand-holding-hand"></i>
+            <span class="hidden sm:inline">Issue Part</span>
+          </button>
+          
+          <button onclick="openModal('receiveModal')" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 transform active:scale-95">
+            <i class="fa-solid fa-truck-ramp-box"></i>
+            <span class="hidden sm:inline">Receive Stock</span>
+          </button>
+
+          <button onclick="openModal('excelUploadModal')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 transform active:scale-95 border border-emerald-500/40">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Upload Excel</span>
+          </button>
+
+          <button onclick="confirmClearAllData()" title="Clear / Wipe All System Data" class="bg-rose-900/50 hover:bg-rose-800 text-rose-300 px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all flex items-center gap-1.5 border border-rose-700/60">
+            <i class="fa-solid fa-broom"></i>
+            <span class="hidden lg:inline">Clear All Data</span>
+          </button>
+
+          <button onclick="confirmResetData()" title="Reset to Sample Data" class="bg-slate-700 hover:bg-slate-600 text-slate-300 p-2 rounded-lg text-sm transition-all">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full flex flex-col gap-6">
+
+    <!-- KPI Highlight Cards Row -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="kpi-cards">
+      <!-- Generated via JS -->
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-1.5 flex flex-wrap gap-1 shadow-sm">
+      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-cyan-600 text-white shadow">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Dashboard</span>
+      </button>
+      <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50">
+        <i class="fa-solid fa-boxes-stacked"></i>
+        <span>Stock Inventory</span>
+      </button>
+      <button onclick="switchTab('machines')" id="tab-machines" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50">
+        <i class="fa-solid fa-industry"></i>
+        <span>Machine Usage</span>
+      </button>
+      <button onclick="switchTab('technicians')" id="tab-technicians" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50">
+        <i class="fa-solid fa-user-gear"></i>
+        <span>Technicians</span>
+      </button>
+      <button onclick="switchTab('logs')" id="tab-logs" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50">
+        <i class="fa-solid fa-receipt"></i>
+        <span>Transaction Logs</span>
+      </button>
+      <button onclick="switchTab('deleted')" id="tab-deleted" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50">
+        <i class="fa-solid fa-trash-can text-rose-400"></i>
+        <span>Deleted Logs</span>
+        <span id="deleted-count-badge" class="bg-rose-500/20 text-rose-300 text-xs px-1.5 py-0.5 rounded-full">0</span>
+      </button>
+    </div>
+
+    <!-- VIEW 1: DASHBOARD OVERVIEW -->
+    <div id="view-dashboard" class="space-y-6">
+      <!-- Analytics Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Chart 1: Stock Activity Trend -->
+        <div class="lg:col-span-2 bg-slate-800/80 border border-slate-700/70 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-chart-area text-cyan-400"></i> Stock Issue & Receive Activity
+              </h2>
+              <p class="text-xs text-slate-400">Monthly movement comparison of maintenance spare parts</p>
+            </div>
+            <span class="text-xs bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md">Last 6 Months</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="activityChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Cost Distribution by Machine -->
+        <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-slate-100 flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-amber-400"></i> Spend by Machine
+              </h2>
+              <p class="text-xs text-slate-400">Top machines by spare part consumption value</p>
+            </div>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="machineCostChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Dashboard Grid: Low Stock Alert & Recent Transactions -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Low Stock Alerts Panel -->
+        <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-rose-500 animate-pulse"></div>
+              <h3 class="font-bold text-slate-100">Low Stock Reorder Alert</h3>
+            </div>
+            <span id="low-stock-badge" class="bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs px-2.5 py-0.5 rounded-full font-semibold">0 Items</span>
+          </div>
+          <div id="low-stock-list" class="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <!-- Recent Transactions Quick Feed -->
+        <div class="lg:col-span-2 bg-slate-800/80 border border-slate-700/70 rounded-xl p-5 shadow-lg">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-slate-100 flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> Recent Stock Movement
+            </h3>
+            <button onclick="switchTab('logs')" class="text-xs text-cyan-400 hover:text-cyan-300 font-medium">View All Logs &rarr;</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="text-xs uppercase bg-slate-900/50 text-slate-400 border-b border-slate-700">
+                <tr>
+                  <th class="py-2.5 px-3">Date</th>
+                  <th class="py-2.5 px-3">Type</th>
+                  <th class="py-2.5 px-3">Spare Part</th>
+                  <th class="py-2.5 px-3">Cupboard/Rack</th>
+                  <th class="py-2.5 px-3">Machine / Target</th>
+                  <th class="py-2.5 px-3">Technician</th>
+                  <th class="py-2.5 px-3 text-right">Qty</th>
+                </tr>
+              </thead>
+              <tbody id="recent-transactions-tbody" class="divide-y divide-slate-700/50">
+                <!-- Populated via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: STOCK INVENTORY -->
+    <div id="view-inventory" class="hidden space-y-4">
+      <!-- Toolbar -->
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div class="flex flex-wrap flex-1 gap-3 w-full md:w-auto">
+          <!-- Search -->
+          <div class="relative flex-1 min-w-[200px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="inv-search" oninput="renderInventory()" placeholder="Search SKU, Part Name, Cupboard, Rack..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500">
+          </div>
+          <!-- Category Filter -->
+          <select id="inv-category-filter" onchange="renderInventory()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Categories</option>
+          </select>
+          <!-- Cupboard Filter -->
+          <select id="inv-cupboard-filter" onchange="renderInventory()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Cupboards</option>
+          </select>
+          <!-- Status Filter -->
+          <select id="inv-status-filter" onchange="renderInventory()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Stock Levels</option>
+            <option value="LOW">Low Stock Only</option>
+            <option value="NORMAL">Adequate Stock</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+          <button onclick="openModal('excelUploadModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Excel Stock In</span>
+          </button>
+          <button onclick="openModal('addPartModal')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Part</span>
+          </button>
+          <button onclick="exportCSV('inventory')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>Export CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Inventory Table -->
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-4">SKU / Code</th>
+                <th class="py-3 px-4">Part Description</th>
+                <th class="py-3 px-4">Category</th>
+                <th class="py-3 px-4">Cupboard #</th>
+                <th class="py-3 px-4">Rack #</th>
+                <th class="py-3 px-4 text-center">Available Stock</th>
+                <th class="py-3 px-4 text-center">Min Reorder</th>
+                <th class="py-3 px-4 text-right">Unit Price (Rs.)</th>
+                <th class="py-3 px-4 text-right">Total Value (Rs.)</th>
+                <th class="py-3 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-tbody" class="divide-y divide-slate-700/50">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: MACHINE USAGE TRACKER -->
+    <div id="view-machines" class="hidden space-y-4">
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div class="flex flex-1 gap-3 w-full md:w-auto">
+          <div class="relative flex-1 max-w-md">
+            <i class="fa-solid fa-industry absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="machine-search" oninput="renderMachines()" placeholder="Search Machine Code, Name, or Department..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500">
+          </div>
+          <select id="machine-dept-filter" onchange="renderMachines()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Departments</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end">
+          <button onclick="openModal('excelMachineUploadModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Excel Import Machines</span>
+          </button>
+          <button onclick="openModal('addMachineModal')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all">
+            <i class="fa-solid fa-plus"></i>
+            <span>Register Machine</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Machine Cards Grid -->
+      <div id="machines-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+
+    <!-- VIEW 4: TECHNICIAN ACTIVITY -->
+    <div id="view-technicians" class="hidden space-y-4">
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div class="flex flex-1 gap-3 w-full md:w-auto">
+          <div class="relative flex-1 max-w-md">
+            <i class="fa-solid fa-user-gear absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="tech-search" oninput="renderTechnicians()" placeholder="Search Technician Name, Role or Department..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500">
+          </div>
+        </div>
+        <button onclick="openModal('addTechModal')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all">
+          <i class="fa-solid fa-plus"></i>
+          <span>Add Technician</span>
+        </button>
+      </div>
+
+      <!-- Technician Cards Grid -->
+      <div id="technicians-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Populated via JS -->
+      </div>
+    </div>
+
+    <!-- VIEW 5: TRANSACTION LOGS -->
+    <div id="view-logs" class="hidden space-y-4">
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div class="flex flex-wrap flex-1 gap-3 items-center">
+          <!-- Search -->
+          <div class="relative min-w-[200px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="log-search" oninput="renderLogs()" placeholder="Search Part, Machine, WO#, Tech..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500">
+          </div>
+          <!-- Type Filter -->
+          <select id="log-type-filter" onchange="renderLogs()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Types</option>
+            <option value="ISSUE">Issue (Stock Out)</option>
+            <option value="RECEIVE">Receive (Stock In)</option>
+          </select>
+          <!-- Machine Filter -->
+          <select id="log-machine-filter" onchange="renderLogs()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Target Machines</option>
+          </select>
+          <!-- Tech Filter -->
+          <select id="log-tech-filter" onchange="renderLogs()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Technicians</option>
+          </select>
+        </div>
+
+        <button onclick="exportCSV('logs')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+          <i class="fa-solid fa-file-csv"></i>
+          <span>Export Logs CSV</span>
+        </button>
+      </div>
+
+      <!-- Logs Table -->
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-4">Date & Time</th>
+                <th class="py-3 px-4">Type</th>
+                <th class="py-3 px-4">Work Order / GRN</th>
+                <th class="py-3 px-4">Spare Part (SKU)</th>
+                <th class="py-3 px-4">Cupboard / Rack</th>
+                <th class="py-3 px-4">Machine Used On</th>
+                <th class="py-3 px-4">Technician</th>
+                <th class="py-3 px-4 text-right">Qty</th>
+                <th class="py-3 px-4 text-right">Total Cost (Rs.)</th>
+                <th class="py-3 px-4">Remarks / Purpose</th>
+              </tr>
+            </thead>
+            <tbody id="logs-tbody" class="divide-y divide-slate-700/50">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 6: DELETED LOGS & RESTORE -->
+    <div id="view-deleted" class="hidden space-y-4">
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="bg-rose-500/20 text-rose-400 p-2.5 rounded-xl border border-rose-500/30">
+            <i class="fa-solid fa-trash-can text-lg"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-white text-base">Deleted Spare Parts Log</h2>
+            <p class="text-xs text-slate-400">View items deleted using password authorization and restore them to active stock anytime.</p>
+          </div>
+        </div>
+
+        <button onclick="promptClearDeletedHistory()" class="bg-rose-900/40 hover:bg-rose-800/60 border border-rose-700/50 text-rose-300 px-3.5 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 transition-all">
+          <i class="fa-solid fa-broom"></i>
+          <span>Clear Deleted Logs</span>
+        </button>
+      </div>
+
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-4">Deleted Date</th>
+                <th class="py-3 px-4">SKU / Code</th>
+                <th class="py-3 px-4">Part Description</th>
+                <th class="py-3 px-4">Category</th>
+                <th class="py-3 px-4">Cupboard / Rack</th>
+                <th class="py-3 px-4 text-center">Stock At Deletion</th>
+                <th class="py-3 px-4 text-right">Unit Price (Rs.)</th>
+                <th class="py-3 px-4 text-center">Restore Action</th>
+              </tr>
+            </thead>
+            <tbody id="deleted-tbody" class="divide-y divide-slate-700/50">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL 1: ISSUE SPARE PART -->
+  <div id="issueModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-amber-500/20 text-amber-400 p-2 rounded-lg">
+            <i class="fa-solid fa-hand-holding-hand text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100">Issue Spare Part</h3>
+            <p class="text-xs text-slate-400">Record stock checkout for maintenance work</p>
+          </div>
+        </div>
+        <button onclick="closeModal('issueModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="issueForm" onsubmit="handleIssueSubmit(event)" class="space-y-4">
+        <!-- Part Selection -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Select Spare Part *</label>
+          <!-- SKU Search filter input for Issue Modal -->
+          <div class="relative mb-2">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="issue-part-search-input" oninput="filterIssueParts()" placeholder="Type SKU, part name, category, or cupboard..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-500">
+          </div>
+          <select id="issue-part-id" required onchange="updateIssueStockInfo()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+            <!-- Populated via JS -->
+          </select>
+          <div id="issue-part-info" class="text-xs text-slate-400 mt-1.5 flex flex-wrap justify-between bg-slate-900/50 p-2 rounded border border-slate-700/60 gap-2">
+            <span>Stock Available: <strong id="issue-avail-qty" class="text-amber-400">0</strong></span>
+            <span>Category: <strong id="issue-category" class="text-amber-300">-</strong></span>
+            <span>Cupboard: <strong id="issue-cupboard" class="text-cyan-400">-</strong></span>
+            <span>Rack: <strong id="issue-rack" class="text-indigo-400">-</strong></span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Quantity -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Quantity to Issue *</label>
+            <input type="number" id="issue-qty" min="1" value="1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+          <!-- Work Order # -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Work Order / Ref #</label>
+            <input type="text" id="issue-wo" placeholder="e.g. WO-2026-904" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Machine Selection -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Used On Machine *</label>
+            <!-- Machine Search filter input for Issue Modal -->
+            <div class="relative mb-2">
+              <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input type="text" id="issue-machine-search-input" oninput="filterIssueMachines()" placeholder="Search machine code or name..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-500">
+            </div>
+            <select id="issue-machine-id" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+          <!-- Technician Selection -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Assigned Technician *</label>
+            <select id="issue-tech-id" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <!-- Work Purpose -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Maintenance Type</label>
+            <select id="issue-purpose" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+              <option value="Breakdown Repair">Breakdown Repair</option>
+              <option value="Preventive Maintenance">Preventive Maintenance (PM)</option>
+              <option value="Overhaul & Refurbishment">Overhaul & Refurbishment</option>
+              <option value="Calibration & Testing">Calibration & Testing</option>
+              <option value="General Fitting">General Fitting</option>
+            </select>
+          </div>
+          <!-- Date -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Date</label>
+            <input type="date" id="issue-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Notes / Diagnostic Remarks</label>
+          <textarea id="issue-notes" rows="2" placeholder="e.g. Replaced worn bearing due to abnormal noise during shift A..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('issueModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-lg text-sm shadow">Confirm & Issue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: RECEIVE STOCK -->
+  <div id="receiveModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-emerald-500/20 text-emerald-400 p-2 rounded-lg">
+            <i class="fa-solid fa-truck-ramp-box text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100">Receive Stock In</h3>
+            <p class="text-xs text-slate-400">Record incoming spare parts & update inventory</p>
+          </div>
+        </div>
+        <button onclick="closeModal('receiveModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="receiveForm" onsubmit="handleReceiveSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Select Spare Part *</label>
+          <!-- SKU Search filter input for Receive Modal -->
+          <div class="relative mb-2">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="receive-part-search-input" oninput="filterReceiveParts()" placeholder="Type SKU, part name, category, or cupboard..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500">
+          </div>
+          <select id="receive-part-id" required onchange="updateReceiveLocationInfo()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+            <!-- Populated via JS -->
+          </select>
+          <div id="receive-part-info" class="text-xs text-slate-400 mt-1.5 flex flex-wrap justify-between bg-slate-900/50 p-2 rounded border border-slate-700/60 gap-2">
+            <span>Category: <strong id="receive-category" class="text-emerald-300">-</strong></span>
+            <span>Destination Cupboard: <strong id="receive-cupboard" class="text-cyan-400">-</strong></span>
+            <span>Rack #: <strong id="receive-rack" class="text-indigo-400">-</strong></span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Received Quantity *</label>
+            <input type="number" id="receive-qty" min="1" value="5" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Unit Cost (Rs.)</label>
+            <input type="number" step="0.01" id="receive-price" min="0" placeholder="Leave empty for current cost" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">GRN / PO Number</label>
+            <input type="text" id="receive-grn" placeholder="e.g. GRN-88219" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Supplier / Vendor</label>
+            <input type="text" id="receive-supplier" placeholder="e.g. Industrial Supplies Ltd" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Receiver Storekeeper</label>
+            <select id="receive-tech-id" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Date</label>
+            <input type="date" id="receive-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Remarks</label>
+          <textarea id="receive-notes" rows="2" placeholder="e.g. Standard stock replenishment under annual contract..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('receiveModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold rounded-lg text-sm shadow">Add to Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: EXCEL STOCK IN UPLOAD -->
+  <div id="excelUploadModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-xl border border-emerald-500/30">
+            <i class="fa-solid fa-file-excel text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100 text-lg">Batch Stock In via Excel File</h3>
+            <p class="text-xs text-slate-400">Upload `.xlsx`, `.xls` or `.csv` to update or insert stock with Cupboard & Rack</p>
+          </div>
+        </div>
+        <button onclick="closeModal('excelUploadModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Format Guide -->
+      <div class="bg-slate-900/70 border border-cyan-500/30 rounded-xl p-3 text-xs text-slate-300 space-y-1">
+        <div class="font-semibold text-cyan-400 flex items-center gap-1">
+          <i class="fa-solid fa-circle-info"></i> Expected Excel Columns Header Format:
+        </div>
+        <div class="font-mono text-slate-400 overflow-x-auto py-1">
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">SKU</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">Part Name</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">Category</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">Qty</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">Min Qty</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">Unit Cost</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-cyan-300 mr-1">Cupboard</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-indigo-300">Rack</span>
+        </div>
+        <p class="text-[11px] text-slate-400 italic">If SKU already exists, stock quantity will be added to current inventory and location updated.</p>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div class="border-2 border-dashed border-slate-600 hover:border-emerald-500 rounded-xl p-6 text-center cursor-pointer bg-slate-900/40 transition-colors" onclick="document.getElementById('excelFileInput').click()">
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileSelect(event)">
+        <i class="fa-solid fa-cloud-arrow-up text-3xl text-emerald-400 mb-2"></i>
+        <p class="text-sm font-semibold text-white">Click to select or drag & drop Excel spreadsheet</p>
+        <p class="text-xs text-slate-400 mt-1" id="excel-file-name">Supports XLSX, XLS or CSV format</p>
+      </div>
+
+      <!-- Preview Table -->
+      <div id="excel-preview-container" class="hidden flex-1 overflow-y-auto space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+          <span>Parsed Items Preview (<span id="excel-item-count" class="text-emerald-400">0</span> items)</span>
+          <span class="text-amber-400">Ready to Import</span>
+        </div>
+        <div class="border border-slate-700 rounded-xl overflow-hidden">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900 uppercase text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-2">SKU</th>
+                <th class="p-2">Part Name</th>
+                <th class="p-2">Category</th>
+                <th class="p-2">Cupboard</th>
+                <th class="p-2">Rack</th>
+                <th class="p-2 text-right">Qty</th>
+                <th class="p-2 text-right">Cost (Rs.)</th>
+              </tr>
+            </thead>
+            <tbody id="excel-preview-tbody" class="divide-y divide-slate-700/50">
+              <!-- JS Populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-700">
+        <button onclick="downloadSampleExcel()" type="button" class="text-xs text-cyan-400 hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-download"></i> Download Excel Template
+        </button>
+
+        <div class="flex gap-2">
+          <button type="button" onclick="closeModal('excelUploadModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="button" id="btn-confirm-excel-import" disabled onclick="confirmExcelImport()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm shadow">
+            Confirm Stock-In Import
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: ADD NEW SPARE PART -->
+  <div id="addPartModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <h3 class="font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-square-plus text-cyan-400"></i> Register New Spare Part
+        </h3>
+        <button onclick="closeModal('addPartModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="addPartForm" onsubmit="handleAddPartSubmit(event)" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">SKU / Code *</label>
+            <input type="text" id="part-sku" required placeholder="e.g. SKU-1011" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Category *</label>
+            <input type="text" id="part-category" required placeholder="e.g. Bearings, Pneumatics" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Part Description / Name *</label>
+          <input type="text" id="part-name" required placeholder="e.g. High Speed Timing Belt HTD-8M" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Initial Qty *</label>
+            <input type="number" id="part-qty" min="0" value="10" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Min Reorder Qty *</label>
+            <input type="number" id="part-min" min="1" value="5" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Unit Cost (Rs.) *</label>
+            <input type="number" step="0.01" id="part-cost" min="0" value="25.00" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+        </div>
+
+        <!-- Cupboard and Rack inputs -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Cupboard Number *</label>
+            <input type="text" id="part-cupboard" required placeholder="e.g. Cupboard 03" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Rack Number *</label>
+            <input type="text" id="part-rack" required placeholder="e.g. Rack B-02" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('addPartModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg text-sm shadow">Save Part</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: ADD MACHINE -->
+  <div id="addMachineModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <h3 class="font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-industry text-cyan-400"></i> Register New Machine
+        </h3>
+        <button onclick="closeModal('addMachineModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="addMachineForm" onsubmit="handleAddMachineSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Machine Code *</label>
+          <input type="text" id="mch-code" required placeholder="e.g. MCH-109" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Machine Name / Model *</label>
+          <input type="text" id="mch-name" required placeholder="e.g. Muller NF 42 Weaving Loom" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Department *</label>
+          <input type="text" id="mch-dept" required placeholder="e.g. Weaving, Dyeing, Utilities" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Location / Bay</label>
+          <input type="text" id="mch-location" placeholder="e.g. Plant 01 - Bay B" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('addMachineModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg text-sm shadow">Save Machine</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5.1: BATCH EXCEL MACHINE UPLOAD -->
+  <div id="excelMachineUploadModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-xl border border-emerald-500/30">
+            <i class="fa-solid fa-file-excel text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100 text-lg">Batch Import Machines via Excel</h3>
+            <p class="text-xs text-slate-400">Upload `.xlsx`, `.xls` or `.csv` to add or update machine records</p>
+          </div>
+        </div>
+        <button onclick="closeModal('excelMachineUploadModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Format Guide -->
+      <div class="bg-slate-900/70 border border-cyan-500/30 rounded-xl p-3 text-xs text-slate-300 space-y-1">
+        <div class="font-semibold text-cyan-400 flex items-center gap-1">
+          <i class="fa-solid fa-circle-info"></i> Expected Excel Columns Header Format:
+        </div>
+        <div class="font-mono text-slate-400 overflow-x-auto py-1">
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-cyan-300 mr-1">Machine Code</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">Machine Name</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">Department</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-indigo-300">Location</span>
+        </div>
+        <p class="text-[11px] text-slate-400 italic">If Machine Code already exists, details will be updated; otherwise a new machine record is created.</p>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div class="border-2 border-dashed border-slate-600 hover:border-emerald-500 rounded-xl p-6 text-center cursor-pointer bg-slate-900/40 transition-colors" onclick="document.getElementById('excelMachineFileInput').click()">
+        <input type="file" id="excelMachineFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelMachineFileSelect(event)">
+        <i class="fa-solid fa-cloud-arrow-up text-3xl text-emerald-400 mb-2"></i>
+        <p class="text-sm font-semibold text-white">Click to select or drag & drop Machine Excel file</p>
+        <p class="text-xs text-slate-400 mt-1" id="excel-machine-file-name">Supports XLSX, XLS or CSV format</p>
+      </div>
+
+      <!-- Preview Table -->
+      <div id="excel-machine-preview-container" class="hidden flex-1 overflow-y-auto space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+          <span>Parsed Machine Records (<span id="excel-machine-count" class="text-emerald-400">0</span> items)</span>
+          <span class="text-amber-400">Ready to Import</span>
+        </div>
+        <div class="border border-slate-700 rounded-xl overflow-hidden">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900 uppercase text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-2">Machine Code</th>
+                <th class="p-2">Machine Name</th>
+                <th class="p-2">Department</th>
+                <th class="p-2">Location</th>
+              </tr>
+            </thead>
+            <tbody id="excel-machine-preview-tbody" class="divide-y divide-slate-700/50">
+              <!-- JS Populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-700">
+        <button onclick="downloadSampleMachineExcel()" type="button" class="text-xs text-cyan-400 hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-download"></i> Download Machine Excel Template
+        </button>
+
+        <div class="flex gap-2">
+          <button type="button" onclick="closeModal('excelMachineUploadModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="button" id="btn-confirm-excel-machine-import" disabled onclick="confirmExcelMachineImport()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm shadow">
+            Confirm Machine Import
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: ADD TECHNICIAN -->
+  <div id="addTechModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <h3 class="font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-user-gear text-cyan-400"></i> Add New Technician
+        </h3>
+        <button onclick="closeModal('addTechModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="addTechForm" onsubmit="handleAddTechSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Technician Code / EPF *</label>
+          <input type="text" id="tech-code" required placeholder="e.g. TECH-08" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Full Name *</label>
+          <input type="text" id="tech-name" required placeholder="e.g. Hasitha Gunawardhana" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Designation / Role *</label>
+          <input type="text" id="tech-role" required placeholder="e.g. Mechanical Specialist, Electrician" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Department</label>
+          <input type="text" id="tech-dept" placeholder="e.g. Maintenance Department" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('addTechModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg text-sm shadow">Save Technician</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 7: PASSWORD AUTHORIZATION MODAL (Chama123) -->
+  <div id="passwordModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-sm w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-2 text-rose-400">
+          <i class="fa-solid fa-lock text-lg"></i>
+          <h3 class="font-bold text-slate-100" id="pwd-modal-title">Password Required</h3>
+        </div>
+        <button onclick="closeModal('passwordModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <p class="text-xs text-slate-300" id="pwd-modal-desc">Authorization is required to execute this sensitive action.</p>
+
+      <div>
+        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Enter Master Password</label>
+        <div class="relative">
+          <input type="password" id="auth-password-input" onkeydown="if(event.key==='Enter') validatePasswordAndExecute()" placeholder="Enter password..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-rose-500">
+          <button type="button" onclick="togglePasswordVis()" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs">
+            <i class="fa-solid fa-eye" id="pwd-eye-icon"></i>
+          </button>
+        </div>
+        <p id="pwd-error-msg" class="text-xs text-rose-400 mt-1.5 hidden flex items-center gap-1">
+          <i class="fa-solid fa-circle-exclamation"></i> Invalid password! Please try again.
+        </p>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeModal('passwordModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+        <button type="button" onclick="validatePasswordAndExecute()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-lg text-sm shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-shield-halved"></i> Authorize
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 8: DRILLDOWN DETAILS -->
+  <div id="detailsModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div>
+          <h3 id="details-modal-title" class="font-bold text-slate-100 text-lg">Detailed Usage History</h3>
+          <p id="details-modal-subtitle" class="text-xs text-slate-400">Complete parts consumption log</p>
+        </div>
+        <button onclick="closeModal('detailsModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 pr-1">
+        <table class="w-full text-left text-sm text-slate-300">
+          <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-700 sticky top-0">
+            <tr>
+              <th class="py-2.5 px-3">Date</th>
+              <th class="py-2.5 px-3">Work Order</th>
+              <th class="py-2.5 px-3">Part Description</th>
+              <th class="py-2.5 px-3">Cupboard/Rack</th>
+              <th class="py-2.5 px-3">Entity</th>
+              <th class="py-2.5 px-3 text-right">Qty</th>
+              <th class="py-2.5 px-3 text-right">Cost (Rs.)</th>
+            </tr>
+          </thead>
+          <tbody id="details-modal-tbody" class="divide-y divide-slate-700/50">
+            <!-- Populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-700 text-xs text-slate-400">
+        <span id="details-total-count">0 items found</span>
+        <button onclick="closeModal('detailsModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Close</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <!-- Firebase SDK Module Import -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Firebase Credentials provided for project sml-otd
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+      apiKey: "AIzaSyChqHBCQLazakNfz48641ODxgRiz2FKk8U",
+      authDomain: "sml-otd.firebaseapp.com",
+      databaseURL: "https://sml-otd-default-rtdb.firebaseio.com",
+      projectId: "sml-otd",
+      storageBucket: "sml-otd.firebasestorage.app",
+      messagingSenderId: "710493386591",
+      appId: "1:710493386591:web:b1dba9e0a2f341ebf5a8ea",
+      measurementId: "G-HD05WRNQFK"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'sml-otd-app';
+
+    // Expose Firebase DB & Auth globally
+    window.firebaseApp = app;
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    window.appId = appId;
+    window.firestoreApi = { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc };
+
+    // Authenticate user before querying Firestore
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.warn("Auth initialization error, falling back to anonymous auth:", err);
+        try { await signInAnonymously(auth); } catch (e) { console.error("Anonymous auth failed:", e); }
+      }
+    };
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("Connected to Realtime Firebase as:", user.uid);
+        const badge = document.getElementById('db-status-badge');
+        if (badge) {
+          badge.className = "bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1";
+          badge.innerHTML = `<i class="fa-solid fa-wifi text-[10px]"></i> Live Realtime DB`;
+        }
+        window.setupRealtimeListeners();
+      }
+    });
+
+    initAuth();
+  </script>
+
+  <script>
+    // --- MASTER AUTH PASSWORD ---
+    const MASTER_PASSWORD = "Chama123";
+
+    // --- UI NAVIGATION & TOASTS ---
+    function switchTab(tabName) {
+      const tabs = ['dashboard', 'inventory', 'machines', 'technicians', 'logs', 'deleted'];
+      tabs.forEach(t => {
+        const viewEl = document.getElementById(`view-${t}`);
+        const btnEl = document.getElementById(`tab-${t}`);
+        if (viewEl) viewEl.classList.toggle('hidden', t !== tabName);
+        if (btnEl) {
+          if (t === tabName) {
+            btnEl.className = "tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 bg-cyan-600 text-white shadow";
+          } else {
+            btnEl.className = "tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50";
+          }
+        }
+      });
+      if (tabName === 'dashboard') updateDashboardData();
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      let bgColor = 'bg-slate-800 border-cyan-500 text-cyan-300';
+      let icon = 'fa-info-circle';
+
+      if (type === 'success') {
+        bgColor = 'bg-slate-800 border-emerald-500 text-emerald-300';
+        icon = 'fa-circle-check';
+      } else if (type === 'error') {
+        bgColor = 'bg-slate-800 border-rose-500 text-rose-300';
+        icon = 'fa-circle-exclamation';
+      } else if (type === 'amber') {
+        bgColor = 'bg-slate-800 border-amber-500 text-amber-300';
+        icon = 'fa-triangle-exclamation';
+      }
+
+      toast.className = `${bgColor} border px-4 py-3 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 pointer-events-auto transform transition-all duration-300 ease-out translate-y-2 opacity-0`;
+      toast.innerHTML = `<i class="fa-solid ${icon} text-sm"></i> <span>${message}</span>`;
+
+      container.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // --- PASSWORD AUTHORIZATION SYSTEM ---
+    function requestPasswordAuth(title, desc, callback) {
+      const titleEl = document.getElementById('pwd-modal-title');
+      const descEl = document.getElementById('pwd-modal-desc');
+      const inputEl = document.getElementById('auth-password-input');
+      const errEl = document.getElementById('pwd-error-msg');
+
+      if (titleEl) titleEl.textContent = title;
+      if (descEl) descEl.textContent = desc;
+      if (inputEl) inputEl.value = '';
+      if (errEl) errEl.classList.add('hidden');
+
+      pendingAuthCallback = callback;
+      openModal('passwordModal');
+      setTimeout(() => inputEl && inputEl.focus(), 100);
+    }
+
+    function validatePasswordAndExecute() {
+      const input = document.getElementById('auth-password-input');
+      const errEl = document.getElementById('pwd-error-msg');
+      const enteredPwd = input ? input.value : '';
+
+      if (enteredPwd === MASTER_PASSWORD) {
+        if (errEl) errEl.classList.add('hidden');
+        closeModal('passwordModal');
+        if (input) input.value = '';
+        if (typeof pendingAuthCallback === 'function') {
+          const cb = pendingAuthCallback;
+          pendingAuthCallback = null;
+          cb();
+        }
+      } else {
+        if (errEl) errEl.classList.remove('hidden');
+      }
+    }
+
+    // --- DATE & DROPDOWN INITIALIZERS ---
+    function setDefaultDates() {
+      const today = new Date().toISOString().split('T')[0];
+      const issueDate = document.getElementById('issue-date');
+      const receiveDate = document.getElementById('receive-date');
+      if (issueDate) issueDate.value = today;
+      if (receiveDate) receiveDate.value = today;
+    }
+
+    function updateIssueStockInfo() {
+      const partId = document.getElementById('issue-part-id')?.value;
+      const part = inventory.find(p => p.id === partId);
+      const availQty = document.getElementById('issue-avail-qty');
+      const category = document.getElementById('issue-category');
+      const cupboard = document.getElementById('issue-cupboard');
+      const rack = document.getElementById('issue-rack');
+
+      if (part) {
+        if (availQty) availQty.textContent = part.qty;
+        if (category) category.textContent = part.category || '-';
+        if (cupboard) cupboard.textContent = part.cupboard || '-';
+        if (rack) rack.textContent = part.rack || '-';
+      } else {
+        if (availQty) availQty.textContent = '0';
+        if (category) category.textContent = '-';
+        if (cupboard) cupboard.textContent = '-';
+        if (rack) rack.textContent = '-';
+      }
+    }
+
+    function updateReceiveLocationInfo() {
+      const partId = document.getElementById('receive-part-id')?.value;
+      const part = inventory.find(p => p.id === partId);
+      const category = document.getElementById('receive-category');
+      const cupboard = document.getElementById('receive-cupboard');
+      const rack = document.getElementById('receive-rack');
+
+      if (part) {
+        if (category) category.textContent = part.category || '-';
+        if (cupboard) cupboard.textContent = part.cupboard || '-';
+        if (rack) rack.textContent = part.rack || '-';
+      } else {
+        if (category) category.textContent = '-';
+        if (cupboard) cupboard.textContent = '-';
+        if (rack) rack.textContent = '-';
+      }
+    }
+
+    function populateDropdowns() {
+      // 1. Inventory Category Filter
+      const catSelect = document.getElementById('inv-category-filter');
+      if (catSelect) {
+        const categories = [...new Set(inventory.map(p => p.category))].filter(Boolean).sort();
+        const currentCat = catSelect.value;
+        catSelect.innerHTML = `<option value="ALL">All Categories</option>` + categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        catSelect.value = categories.includes(currentCat) ? currentCat : 'ALL';
+      }
+
+      // 2. Inventory Cupboard Filter
+      const cupSelect = document.getElementById('inv-cupboard-filter');
+      if (cupSelect) {
+        const cupboards = [...new Set(inventory.map(p => p.cupboard))].filter(Boolean).sort();
+        const currentCup = cupSelect.value;
+        cupSelect.innerHTML = `<option value="ALL">All Cupboards</option>` + cupboards.map(c => `<option value="${c}">${c}</option>`).join('');
+        cupSelect.value = cupboards.includes(currentCup) ? currentCup : 'ALL';
+      }
+
+      // 3. Machine Dept Filter
+      const deptSelect = document.getElementById('machine-dept-filter');
+      if (deptSelect) {
+        const depts = [...new Set(machines.map(m => m.department))].filter(Boolean).sort();
+        const currentDept = deptSelect.value;
+        deptSelect.innerHTML = `<option value="ALL">All Departments</option>` + depts.map(d => `<option value="${d}">${d}</option>`).join('');
+        deptSelect.value = depts.includes(currentDept) ? currentDept : 'ALL';
+      }
+
+      // 4. Issue Modal Parts Dropdown
+      const issuePartSelect = document.getElementById('issue-part-id');
+      if (issuePartSelect) {
+        const currentVal = issuePartSelect.value;
+        issuePartSelect.innerHTML = inventory.map(p => `<option value="${p.id}">${p.sku} - ${p.name} [Cat: ${p.category}] [${p.cupboard} / ${p.rack}] (Stock: ${p.qty})</option>`).join('');
+        if (inventory.some(p => p.id === currentVal)) issuePartSelect.value = currentVal;
+        updateIssueStockInfo();
+      }
+
+      // 5. Issue Modal Machine Dropdown
+      const issueMchSelect = document.getElementById('issue-machine-id');
+      if (issueMchSelect) {
+        const currentVal = issueMchSelect.value;
+        issueMchSelect.innerHTML = machines.map(m => `<option value="${m.id}">${m.code} - ${m.name} (${m.department})</option>`).join('');
+        if (machines.some(m => m.id === currentVal)) issueMchSelect.value = currentVal;
+      }
+
+      // 6. Issue Modal Tech Dropdown
+      const issueTechSelect = document.getElementById('issue-tech-id');
+      if (issueTechSelect) {
+        const currentVal = issueTechSelect.value;
+        issueTechSelect.innerHTML = technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
+        if (technicians.some(t => t.id === currentVal)) issueTechSelect.value = currentVal;
+      }
+
+      // 7. Receive Modal Part Dropdown
+      const receivePartSelect = document.getElementById('receive-part-id');
+      if (receivePartSelect) {
+        const currentVal = receivePartSelect.value;
+        receivePartSelect.innerHTML = inventory.map(p => `<option value="${p.id}">${p.sku} - ${p.name} [Cat: ${p.category}] [${p.cupboard} / ${p.rack}] (Stock: ${p.qty})</option>`).join('');
+        if (inventory.some(p => p.id === currentVal)) receivePartSelect.value = currentVal;
+        updateReceiveLocationInfo();
+      }
+
+      // 8. Receive Modal Tech Dropdown
+      const receiveTechSelect = document.getElementById('receive-tech-id');
+      if (receiveTechSelect) {
+        const currentVal = receiveTechSelect.value;
+        receiveTechSelect.innerHTML = technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
+        if (technicians.some(t => t.id === currentVal)) receiveTechSelect.value = currentVal;
+      }
+
+      // 9. Log Filters
+      const logMchSelect = document.getElementById('log-machine-filter');
+      if (logMchSelect) {
+        const currentVal = logMchSelect.value;
+        logMchSelect.innerHTML = `<option value="ALL">All Target Machines</option>` + machines.map(m => `<option value="${m.id}">${m.code} - ${m.name}</option>`).join('');
+        if (machines.some(m => m.id === currentVal)) logMchSelect.value = currentVal;
+      }
+
+      const logTechSelect = document.getElementById('log-tech-filter');
+      if (logTechSelect) {
+        const currentVal = logTechSelect.value;
+        logTechSelect.innerHTML = `<option value="ALL">All Technicians</option>` + technicians.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        if (technicians.some(t => t.id === currentVal)) logTechSelect.value = currentVal;
+      }
+    }
+
+    // --- DASHBOARD CARDS & CHARTS ---
+    function updateDashboardData() {
+      // 1. KPI Cards
+      const totalParts = inventory.length;
+      const totalValue = inventory.reduce((acc, p) => acc + (p.qty * p.unitCost), 0);
+      const lowStockItems = inventory.filter(p => p.qty <= p.minQty);
+      const totalIssuesThisMonth = transactions.filter(t => t.type === 'ISSUE').length;
+
+      const kpiContainer = document.getElementById('kpi-cards');
+      if (kpiContainer) {
+        kpiContainer.innerHTML = `
+          <div class="bg-slate-800/80 border border-slate-700/70 p-4 rounded-xl shadow-lg flex items-center gap-4">
+            <div class="bg-cyan-500/20 text-cyan-400 p-3 rounded-xl border border-cyan-500/30">
+              <i class="fa-solid fa-boxes-stacked text-2xl"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 font-medium uppercase">Active Spare SKUs</p>
+              <h3 class="text-2xl font-bold text-white">${totalParts}</h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">Categorized Inventory</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/70 p-4 rounded-xl shadow-lg flex items-center gap-4">
+            <div class="bg-emerald-500/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30">
+              <i class="fa-solid fa-sack-dollar text-2xl"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 font-medium uppercase">Total Stock Value</p>
+              <h3 class="text-2xl font-bold text-white">Rs. ${totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h3>
+              <p class="text-[11px] text-emerald-400 mt-0.5">Asset Inventory Cost</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/70 p-4 rounded-xl shadow-lg flex items-center gap-4">
+            <div class="bg-rose-500/20 text-rose-400 p-3 rounded-xl border border-rose-500/30">
+              <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 font-medium uppercase">Low Stock Alerts</p>
+              <h3 class="text-2xl font-bold ${lowStockItems.length > 0 ? 'text-rose-400' : 'text-white'}">${lowStockItems.length}</h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">At or below reorder level</p>
+            </div>
+          </div>
+
+          <div class="bg-slate-800/80 border border-slate-700/70 p-4 rounded-xl shadow-lg flex items-center gap-4">
+            <div class="bg-amber-500/20 text-amber-400 p-3 rounded-xl border border-amber-500/30">
+              <i class="fa-solid fa-hand-holding-hand text-2xl"></i>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 font-medium uppercase">Total Spare Issues</p>
+              <h3 class="text-2xl font-bold text-white">${totalIssuesThisMonth}</h3>
+              <p class="text-[11px] text-amber-400 mt-0.5">Maintenance Checkouts</p>
+            </div>
+          </div>
+        `;
+      }
+
+      // 2. Low Stock Alerts Panel
+      const lowStockBadge = document.getElementById('low-stock-badge');
+      if (lowStockBadge) lowStockBadge.textContent = `${lowStockItems.length} Items`;
+
+      const lowStockList = document.getElementById('low-stock-list');
+      if (lowStockList) {
+        if (lowStockItems.length === 0) {
+          lowStockList.innerHTML = `<div class="p-4 text-center text-xs text-slate-400 bg-slate-900/40 rounded-lg">All spare parts stock levels are optimal.</div>`;
+        } else {
+          lowStockList.innerHTML = lowStockItems.map(item => `
+            <div class="bg-slate-900/60 border border-rose-500/30 p-3 rounded-lg flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-xs text-rose-400 font-bold">${item.sku}</span>
+                  <span class="text-[10px] bg-slate-800 text-cyan-300 px-1.5 py-0.5 rounded font-mono">${item.cupboard} / ${item.rack}</span>
+                </div>
+                <h4 class="text-xs font-semibold text-white truncate">${item.name}</h4>
+                <p class="text-[11px] text-slate-400">Min Reorder: ${item.minQty} | Unit: Rs. ${item.unitCost.toFixed(2)}</p>
+              </div>
+              <div class="text-right flex flex-col items-end gap-1">
+                <span class="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">${item.qty} left</span>
+                <button onclick="quickReceiveModal('${item.id}')" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white px-2 py-0.5 rounded font-medium transition-all">+ Restock</button>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      // 3. Recent Transactions Feed
+      const recentTbody = document.getElementById('recent-transactions-tbody');
+      if (recentTbody) {
+        const sortedTx = [...transactions].sort((a,b) => new Date(b.date + ' ' + (b.time||'00:00')) - new Date(a.date + ' ' + (a.time||'00:00'))).slice(0, 5);
+        if (sortedTx.length === 0) {
+          recentTbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-xs text-slate-400">No stock movement logged yet.</td></tr>`;
+        } else {
+          recentTbody.innerHTML = sortedTx.map(t => `
+            <tr class="hover:bg-slate-700/30">
+              <td class="py-2.5 px-3 font-mono text-xs text-slate-400">${t.date}</td>
+              <td class="py-2.5 px-3">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded ${t.type === 'ISSUE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${t.type}</span>
+              </td>
+              <td class="py-2.5 px-3 font-medium text-white text-xs">${t.partName} <span class="text-slate-400">(${t.sku})</span></td>
+              <td class="py-2.5 px-3 text-xs"><span class="text-cyan-300 font-mono">${t.cupboard||'-'}</span> / <span class="text-indigo-300 font-mono">${t.rack||'-'}</span></td>
+              <td class="py-2.5 px-3 text-xs text-slate-300">${t.machineName || '-'}</td>
+              <td class="py-2.5 px-3 text-xs text-slate-300">${t.techName || '-'}</td>
+              <td class="py-2.5 px-3 text-right font-bold text-xs ${t.type === 'ISSUE' ? 'text-amber-400' : 'text-emerald-400'}">${t.type === 'ISSUE' ? '-' : '+'}${t.qty}</td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // 4. Render Charts
+      renderCharts();
+    }
+
+    function renderCharts() {
+      // Activity Chart
+      const activityCtx = document.getElementById('activityChart');
+      if (activityCtx) {
+        if (activityChartInstance) activityChartInstance.destroy();
+
+        const months = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
+        const issuesByMonth = [12, 19, 15, 22, 28, transactions.filter(t => t.type === 'ISSUE').length];
+        const receivesByMonth = [15, 10, 20, 18, 25, transactions.filter(t => t.type === 'RECEIVE').length];
+
+        activityChartInstance = new Chart(activityCtx, {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: 'Issued Parts (Stock Out)',
+                data: issuesByMonth,
+                borderColor: '#f59e0b',
+                backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2
+              },
+              {
+                label: 'Received Parts (Stock In)',
+                data: receivesByMonth,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { labels: { color: '#94a3b8', font: { family: 'Inter', size: 11 } } }
+            },
+            scales: {
+              x: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } },
+              y: { grid: { color: 'rgba(51, 65, 85, 0.4)' }, ticks: { color: '#94a3b8' } }
+            }
+          }
+        });
+      }
+
+      // Machine Spend Chart
+      const machineCtx = document.getElementById('machineCostChart');
+      if (machineCtx) {
+        if (machineCostChartInstance) machineCostChartInstance.destroy();
+
+        const machineSpendMap = {};
+        transactions.filter(t => t.type === 'ISSUE' && t.machineId !== '-').forEach(t => {
+          machineSpendMap[t.machineName] = (machineSpendMap[t.machineName] || 0) + (t.totalCost || 0);
+        });
+
+        const labels = Object.keys(machineSpendMap).slice(0, 5);
+        const data = Object.values(machineSpendMap).slice(0, 5);
+
+        machineCostChartInstance = new Chart(machineCtx, {
+          type: 'doughnut',
+          data: {
+            labels: labels.length > 0 ? labels : ['No Machine Data'],
+            datasets: [{
+              data: data.length > 0 ? data : [1],
+              backgroundColor: ['#06b6d4', '#f59e0b', '#10b981', '#6366f1', '#ec4899']
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: 'bottom', labels: { color: '#94a3b8', font: { family: 'Inter', size: 10 } } }
+            }
+          }
+        });
+      }
+    }
+
+    // --- VIEW RENDERERS ---
+
+    // 1. Render Inventory Table
+    function renderInventory() {
+      const search = document.getElementById('inv-search')?.value.toLowerCase().trim() || '';
+      const catFilter = document.getElementById('inv-category-filter')?.value || 'ALL';
+      const cupFilter = document.getElementById('inv-cupboard-filter')?.value || 'ALL';
+      const statusFilter = document.getElementById('inv-status-filter')?.value || 'ALL';
+
+      const filtered = inventory.filter(p => {
+        const matchesSearch = p.sku.toLowerCase().includes(search) || 
+                              p.name.toLowerCase().includes(search) || 
+                              (p.cupboard && p.cupboard.toLowerCase().includes(search)) || 
+                              (p.rack && p.rack.toLowerCase().includes(search));
+        const matchesCat = catFilter === 'ALL' || p.category === catFilter;
+        const matchesCup = cupFilter === 'ALL' || p.cupboard === cupFilter;
+        const matchesStatus = statusFilter === 'ALL' || (statusFilter === 'LOW' ? p.qty <= p.minQty : p.qty > p.minQty);
+        return matchesSearch && matchesCat && matchesCup && matchesStatus;
+      });
+
+      const tbody = document.getElementById('inventory-tbody');
+      if (!tbody) return;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-400">No spare parts found matching the criteria.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(p => {
+        const isLow = p.qty <= p.minQty;
+        const totalVal = p.qty * p.unitCost;
+
+        return `
+          <tr class="hover:bg-slate-700/40 transition-colors border-b border-slate-700/50">
+            <td class="py-3 px-4 font-mono font-semibold text-cyan-400 text-xs">${p.sku}</td>
+            <td class="py-3 px-4 font-semibold text-white">${p.name}</td>
+            <td class="py-3 px-4 text-xs text-slate-300"><span class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded">${p.category}</span></td>
+            <td class="py-3 px-4 text-xs font-mono text-cyan-300 font-medium">${p.cupboard || '-'}</td>
+            <td class="py-3 px-4 text-xs font-mono text-indigo-300 font-medium">${p.rack || '-'}</td>
+            <td class="py-3 px-4 text-center font-bold text-sm ${isLow ? 'text-rose-400 bg-rose-500/10 rounded' : 'text-emerald-400'}">
+              ${p.qty}
+              ${isLow ? '<span class="ml-1 text-[10px] bg-rose-500 text-white px-1.5 py-0.5 rounded-full uppercase">Low</span>' : ''}
+            </td>
+            <td class="py-3 px-4 text-center text-xs text-slate-400">${p.minQty}</td>
+            <td class="py-3 px-4 text-right font-mono text-slate-300">Rs. ${p.unitCost.toFixed(2)}</td>
+            <td class="py-3 px-4 text-right font-mono text-emerald-400 font-semibold">Rs. ${totalVal.toFixed(2)}</td>
+            <td class="py-3 px-4 text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                <button onclick="quickIssueModal('${p.id}')" title="Issue Part" class="bg-amber-500/20 hover:bg-amber-500/40 text-amber-300 border border-amber-500/30 p-1.5 rounded transition-all text-xs">
+                  <i class="fa-solid fa-hand-holding-hand"></i>
+                </button>
+                <button onclick="quickReceiveModal('${p.id}')" title="Receive Stock" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/30 p-1.5 rounded transition-all text-xs">
+                  <i class="fa-solid fa-truck-ramp-box"></i>
+                </button>
+                <button onclick="promptDeleteItem('${p.id}')" title="Delete Part (Password Required)" class="bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 p-1.5 rounded transition-all text-xs">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 2. Render Machines Grid
+    function renderMachines() {
+      const search = document.getElementById('machine-search')?.value.toLowerCase().trim() || '';
+      const deptFilter = document.getElementById('machine-dept-filter')?.value || 'ALL';
+
+      const filtered = machines.filter(m => {
+        const matchesSearch = m.code.toLowerCase().includes(search) || m.name.toLowerCase().includes(search) || m.department.toLowerCase().includes(search);
+        const matchesDept = deptFilter === 'ALL' || m.department === deptFilter;
+        return matchesSearch && matchesDept;
+      });
+
+      const grid = document.getElementById('machines-grid');
+      if (!grid) return;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400 bg-slate-800/80 rounded-xl border border-slate-700">No registered machines found.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(m => {
+        const mTx = transactions.filter(t => t.machineId === m.id && t.type === 'ISSUE');
+        const totalPartsUsed = mTx.reduce((sum, t) => sum + t.qty, 0);
+        const totalSpend = mTx.reduce((sum, t) => sum + t.totalCost, 0);
+
+        return `
+          <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-5 shadow-lg space-y-4 flex flex-col justify-between hover:border-cyan-500/50 transition-all">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="bg-cyan-500/20 text-cyan-300 font-mono text-xs font-bold px-2.5 py-1 rounded border border-cyan-500/30">${m.code}</span>
+                <span class="text-xs text-slate-400 bg-slate-900 px-2 py-0.5 rounded">${m.department}</span>
+              </div>
+              <h3 class="font-bold text-white text-base leading-snug">${m.name}</h3>
+              <p class="text-xs text-slate-400 flex items-center gap-1">
+                <i class="fa-solid fa-location-dot text-rose-400"></i> ${m.location || 'Factory Floor'}
+              </p>
+            </div>
+
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 grid grid-cols-2 gap-2 text-center">
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase font-medium">Parts Installed</p>
+                <p class="text-lg font-bold text-amber-400">${totalPartsUsed} Units</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase font-medium">Maint. Spend</p>
+                <p class="text-lg font-bold text-emerald-400">Rs. ${totalSpend.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-700/60 flex justify-between items-center">
+              <span class="text-xs text-slate-400">${mTx.length} maintenance events</span>
+              <button onclick="openMachineHistory('${m.id}')" class="bg-cyan-600/20 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-clock-rotate-left"></i> View History
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 3. Render Technicians Grid
+    function renderTechnicians() {
+      const search = document.getElementById('tech-search')?.value.toLowerCase().trim() || '';
+
+      const filtered = technicians.filter(t => 
+        t.code.toLowerCase().includes(search) || 
+        t.name.toLowerCase().includes(search) || 
+        t.role.toLowerCase().includes(search) ||
+        t.department.toLowerCase().includes(search)
+      );
+
+      const grid = document.getElementById('technicians-grid');
+      if (!grid) return;
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="col-span-full p-8 text-center text-slate-400 bg-slate-800/80 rounded-xl border border-slate-700">No technicians found.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(t => {
+        const tTx = transactions.filter(tx => tx.techId === t.id && tx.type === 'ISSUE');
+        const partsIssued = tTx.reduce((sum, tx) => sum + tx.qty, 0);
+        const totalCostHandled = tTx.reduce((sum, tx) => sum + tx.totalCost, 0);
+
+        return `
+          <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-5 shadow-lg space-y-4 flex flex-col justify-between hover:border-cyan-500/50 transition-all">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="bg-indigo-500/20 text-indigo-300 font-mono text-xs font-bold px-2.5 py-1 rounded border border-indigo-500/30">${t.code}</span>
+                <span class="text-xs text-slate-400 bg-slate-900 px-2 py-0.5 rounded">${t.department}</span>
+              </div>
+              <h3 class="font-bold text-white text-base">${t.name}</h3>
+              <p class="text-xs text-cyan-400 font-medium">${t.role}</p>
+            </div>
+
+            <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 grid grid-cols-2 gap-2 text-center">
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase font-medium">Parts Checked Out</p>
+                <p class="text-lg font-bold text-amber-400">${partsIssued} Parts</p>
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase font-medium">Total Part Cost</p>
+                <p class="text-lg font-bold text-emerald-400">Rs. ${totalCostHandled.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-700/60 flex justify-between items-center">
+              <button onclick="promptDeleteTech('${t.id}')" title="Delete Technician (Password Authorized)" class="text-rose-400 hover:text-rose-300 text-xs px-2 py-1 rounded hover:bg-rose-500/10 transition-all flex items-center gap-1">
+                <i class="fa-solid fa-trash-can"></i> Delete
+              </button>
+              <button onclick="openTechHistory('${t.id}')" class="bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-receipt"></i> Tech Logs
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 4. Render Transaction Logs Table
+    function renderLogs() {
+      const search = document.getElementById('log-search')?.value.toLowerCase().trim() || '';
+      const typeFilter = document.getElementById('log-type-filter')?.value || 'ALL';
+      const machineFilter = document.getElementById('log-machine-filter')?.value || 'ALL';
+      const techFilter = document.getElementById('log-tech-filter')?.value || 'ALL';
+
+      const filtered = transactions.filter(t => {
+        const matchesSearch = t.partName.toLowerCase().includes(search) || 
+                              t.sku.toLowerCase().includes(search) || 
+                              t.workOrder.toLowerCase().includes(search) || 
+                              (t.notes && t.notes.toLowerCase().includes(search));
+        const matchesType = typeFilter === 'ALL' || t.type === typeFilter;
+        const matchesMch = machineFilter === 'ALL' || t.machineId === machineFilter;
+        const matchesTech = techFilter === 'ALL' || t.techId === techFilter;
+        return matchesSearch && matchesType && matchesMch && matchesTech;
+      });
+
+      const tbody = document.getElementById('logs-tbody');
+      if (!tbody) return;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="py-8 text-center text-slate-400">No transaction logs match your criteria.</td></tr>`;
+        return;
+      }
+
+      const sorted = [...filtered].sort((a,b) => new Date(b.date + ' ' + (b.time||'00:00')) - new Date(a.date + ' ' + (a.time||'00:00')));
+
+      tbody.innerHTML = sorted.map(t => `
+        <tr class="hover:bg-slate-700/40 transition-colors border-b border-slate-700/50">
+          <td class="py-3 px-4 font-mono text-xs text-slate-400 whitespace-nowrap">${t.date} <span class="text-slate-400">${t.time || ''}</span></td>
+          <td class="py-3 px-4">
+            <span class="text-xs font-bold px-2 py-0.5 rounded ${t.type === 'ISSUE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${t.type}</span>
+          </td>
+          <td class="py-3 px-4 font-mono text-xs text-cyan-400 font-medium">${t.workOrder}</td>
+          <td class="py-3 px-4 font-semibold text-white">${t.partName} <span class="text-xs font-mono text-slate-400">(${t.sku})</span></td>
+          <td class="py-3 px-4 text-xs"><span class="text-cyan-300 font-mono">${t.cupboard || '-'}</span> / <span class="text-indigo-300 font-mono">${t.rack || '-'}</span></td>
+          <td class="py-3 px-4 text-xs text-slate-300">${t.machineName}</td>
+          <td class="py-3 px-4 text-xs text-slate-300">${t.techName}</td>
+          <td class="py-3 px-4 text-right font-bold text-sm ${t.type === 'ISSUE' ? 'text-amber-400' : 'text-emerald-400'}">${t.type === 'ISSUE' ? '-' : '+'}${t.qty}</td>
+          <td class="py-3 px-4 text-right font-mono text-emerald-400 font-semibold">Rs. ${t.totalCost.toFixed(2)}</td>
+          <td class="py-3 px-4 text-xs text-slate-400 max-w-xs truncate" title="${t.purpose || ''} - ${t.notes || ''}">${t.purpose || '-'} ${t.notes ? `(${t.notes})` : ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    // 5. Render Deleted Logs Table
+    function renderDeletedLogs() {
+      const tbody = document.getElementById('deleted-tbody');
+      if (!tbody) return;
+
+      if (deletedItems.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">No deleted spare parts in history log.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = deletedItems.map(item => `
+        <tr class="hover:bg-slate-700/40 transition-colors border-b border-slate-700/50">
+          <td class="py-3 px-4 font-mono text-xs text-slate-400">${item.deletedAt || 'Recently'}</td>
+          <td class="py-3 px-4 font-mono text-cyan-400 font-semibold text-xs">${item.sku}</td>
+          <td class="py-3 px-4 font-semibold text-white">${item.name}</td>
+          <td class="py-3 px-4 text-xs text-slate-300">${item.category}</td>
+          <td class="py-3 px-4 text-xs"><span class="text-cyan-300 font-mono">${item.cupboard || '-'}</span> / <span class="text-indigo-300 font-mono">${item.rack || '-'}</span></td>
+          <td class="py-3 px-4 text-center font-bold text-amber-400 text-xs">${item.qty}</td>
+          <td class="py-3 px-4 text-right font-mono text-emerald-400 text-xs">Rs. ${item.unitCost.toFixed(2)}</td>
+          <td class="py-3 px-4 text-center">
+            <button onclick="restoreDeletedItem('${item.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs font-semibold flex items-center gap-1 mx-auto transition-all shadow">
+              <i class="fa-solid fa-rotate-left"></i> Restore
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // --- INITIAL SEED DATA WITH CUPBOARD & RACK ---
+    const DEFAULT_INVENTORY = [
+      { id: 'P01', sku: 'SKU-1001', name: 'Heavy Duty V-Belt B-68', category: 'Drive & Belts', qty: 24, minQty: 10, unitCost: 18.50, cupboard: 'Cupboard 01', rack: 'Rack A-02' },
+      { id: 'P02', sku: 'SKU-1002', name: 'Ball Bearing 6204-2RS', category: 'Bearings', qty: 42, minQty: 15, unitCost: 8.75, cupboard: 'Cupboard 02', rack: 'Rack B-12' },
+      { id: 'P03', sku: 'SKU-1003', name: 'Solenoid Valve 24V DC 1/4"', category: 'Pneumatics', qty: 4, minQty: 8, unitCost: 42.00, cupboard: 'Cupboard 01', rack: 'Rack C-04' },
+      { id: 'P04', sku: 'SKU-1004', name: 'Temperature Sensor PT100', category: 'Electrical', qty: 12, minQty: 5, unitCost: 35.00, cupboard: 'Cupboard 03', rack: 'Rack E-01' },
+      { id: 'P05', sku: 'SKU-1005', name: 'High Temp Mechanical Seal 25mm', category: 'Seals & Gaskets', qty: 3, minQty: 6, unitCost: 95.00, cupboard: 'Cupboard 02', rack: 'Rack B-05' },
+      { id: 'P06', sku: 'SKU-1006', name: 'Hydraulic Oil ISO VG 46 (20L Drum)', category: 'Lubricants', qty: 18, minQty: 5, unitCost: 78.00, cupboard: 'Main Store Bay', rack: 'Rack D-01' },
+      { id: 'P07', sku: 'SKU-1007', name: 'Ceramic Thread Guide Assembly', category: 'Spare Wear Parts', qty: 30, minQty: 10, unitCost: 12.40, cupboard: 'Cupboard 04', rack: 'Rack A-15' },
+      { id: 'P08', sku: 'SKU-1008', name: 'Boiler Gasket Kit High Pressure', category: 'Seals & Gaskets', qty: 2, minQty: 5, unitCost: 110.00, cupboard: 'Cupboard 05', rack: 'Rack D-03' },
+      { id: 'P09', sku: 'SKU-1009', name: 'Kaeser Compressor Air Filter Element', category: 'Filters', qty: 8, minQty: 4, unitCost: 65.00, cupboard: 'Cupboard 03', rack: 'Rack C-02' },
+      { id: 'P10', sku: 'SKU-1010', name: 'Thermal Overload Relay 12A Schneider', category: 'Electrical', qty: 15, minQty: 5, unitCost: 28.00, cupboard: 'Cupboard 03', rack: 'Rack E-09' },
+      { id: 'P11', sku: 'SKU-1011', name: 'Pneumatic Cylinder 32mm x 100mm', category: 'Pneumatics', qty: 5, minQty: 6, unitCost: 84.00, cupboard: 'Cupboard 01', rack: 'Rack C-05' }
+    ];
+
+    const DEFAULT_MACHINES = [
+      { id: 'MCH-001', code: 'MCH-001', name: 'Muller NF 42 Weaving Loom', department: 'Weaving Dept', location: 'Plant 1 - Line 2' },
+      { id: 'MCH-002', code: 'MCH-002', name: 'Fongs SHD 50 Dyeing Machine', department: 'Exhaust Dyeing', location: 'Dye House Bay 3' },
+      { id: 'MCH-003', code: 'MCH-003', name: 'KAESER BSD 81 Compressor 01', department: 'Utilities', location: 'Compressor Room' },
+      { id: 'MCH-004', code: 'MCH-004', name: 'COCHRAN 2.5T Oil Boiler 01', department: 'Utilities', location: 'Boiler House' },
+      { id: 'MCH-005', code: 'MCH-005', name: 'Fadis SINCRO M 510 Winder', department: 'Yarn Dyeing', location: 'Yarn Plant' },
+      { id: 'MCH-006', code: 'MCH-006', name: 'BOGE SLF 75-3 Compressor 02', department: 'Utilities', location: 'Compressor Room' }
+    ];
+
+    const DEFAULT_TECHNICIANS = [
+      { id: 'TECH-001', code: 'TECH-001', name: 'Keerthi Nawarathne', role: 'Senior Maintenance Engineer', department: 'Maintenance Dept' },
+      { id: 'TECH-002', code: 'TECH-002', name: 'Hasitha Gunawardhana', role: 'Production Engineering Executive', department: 'Production Eng.' },
+      { id: 'TECH-003', code: 'TECH-003', name: 'Anushka Maduranga', role: 'Mechanical Technician', department: 'Maintenance Dept' },
+      { id: 'TECH-004', code: 'TECH-004', name: 'Chamod Mahanama', role: 'Automation & Electrical Tech', department: 'Electrical Dept' },
+      { id: 'TECH-005', code: 'TECH-005', name: 'Asanka Perera', role: 'Utility & Boiler Operator', department: 'Utilities' }
+    ];
+
+    const DEFAULT_TRANSACTIONS = [
+      { id: 'TX-1001', date: '2026-11-01', time: '09:30', type: 'ISSUE', partId: 'P02', partName: 'Ball Bearing 6204-2RS', sku: 'SKU-1002', cupboard: 'Cupboard 02', rack: 'Rack B-12', qty: 4, unitCost: 8.75, totalCost: 35.00, machineId: 'MCH-001', machineName: 'Muller NF 42 Weaving Loom', techId: 'TECH-003', techName: 'Anushka Maduranga', workOrder: 'WO-2026-801', purpose: 'Breakdown Repair', notes: 'Replaced noisy main shaft bearing' },
+      { id: 'TX-1002', date: '2026-11-02', time: '11:15', type: 'ISSUE', partId: 'P09', partName: 'Kaeser Compressor Air Filter Element', sku: 'SKU-1009', cupboard: 'Cupboard 03', rack: 'Rack C-02', qty: 2, unitCost: 65.00, totalCost: 130.00, machineId: 'MCH-003', machineName: 'KAESER BSD 81 Compressor 01', techId: 'TECH-001', techName: 'Keerthi Nawarathne', workOrder: 'PM-2026-104', purpose: 'Preventive Maintenance', notes: 'Scheduled 500hr filter service' },
+      { id: 'TX-1003', date: '2026-11-03', time: '14:20', type: 'ISSUE', partId: 'P05', partName: 'High Temp Mechanical Seal 25mm', sku: 'SKU-1005', cupboard: 'Cupboard 02', rack: 'Rack B-05', qty: 2, unitCost: 95.00, totalCost: 190.00, machineId: 'MCH-002', machineName: 'Fongs SHD 50 Dyeing Machine', techId: 'TECH-002', techName: 'Hasitha Gunawardhana', workOrder: 'WO-2026-820', purpose: 'Breakdown Repair', notes: 'Dye pump gland seal failure' },
+      { id: 'TX-1004', date: '2026-11-04', time: '10:00', type: 'RECEIVE', partId: 'P01', partName: 'Heavy Duty V-Belt B-68', sku: 'SKU-1001', cupboard: 'Cupboard 01', rack: 'Rack A-02', qty: 10, unitCost: 18.50, totalCost: 185.00, machineId: '-', machineName: '-', techId: 'TECH-005', techName: 'Asanka Perera', workOrder: 'GRN-9910', purpose: 'Stock Replenishment', notes: 'Received from Belts Direct Inc' }
+    ];
+
+    // --- APPLICATION STATE ---
+    let inventory = [];
+    let machines = [];
+    let technicians = [];
+    let transactions = [];
+    let deletedItems = [];
+
+    let parsedExcelData = [];
+    let parsedMachineData = [];
+    let pendingAuthCallback = null;
+    let isClearingData = false;
+
+    let activityChartInstance = null;
+    let machineCostChartInstance = null;
+
+    // --- INITIALIZATION ---
+    window.onload = function() {
+      loadStateFallback();
+      setDefaultDates();
+      populateDropdowns();
+      updateDashboardData();
+      renderInventory();
+      renderMachines();
+      renderTechnicians();
+      renderLogs();
+      renderDeletedLogs();
+    };
+
+    function loadStateFallback() {
+      const savedInv = localStorage.getItem('maint_inventory');
+      const savedMch = localStorage.getItem('maint_machines');
+      const savedTech = localStorage.getItem('maint_technicians');
+      const savedTx = localStorage.getItem('maint_transactions');
+      const savedDel = localStorage.getItem('maint_deleted');
+      const isInitialized = localStorage.getItem('maint_initialized');
+      const isCleared = localStorage.getItem('maint_cleared') === 'true';
+
+      if (isInitialized || isCleared) {
+        inventory = savedInv ? JSON.parse(savedInv) : [];
+        machines = savedMch ? JSON.parse(savedMch) : [];
+        technicians = savedTech ? JSON.parse(savedTech) : [];
+        transactions = savedTx ? JSON.parse(savedTx) : [];
+        deletedItems = savedDel ? JSON.parse(savedDel) : [];
+      } else {
+        inventory = [...DEFAULT_INVENTORY];
+        machines = [...DEFAULT_MACHINES];
+        technicians = [...DEFAULT_TECHNICIANS];
+        transactions = [...DEFAULT_TRANSACTIONS];
+        deletedItems = [];
+        localStorage.setItem('maint_initialized', 'true');
+        saveState();
+      }
+    }
+
+    // --- REALTIME FIREBASE LISTENERS ---
+    window.setupRealtimeListeners = async function() {
+      if (!window.firebaseDb || !window.firestoreApi) return;
+      const { collection, doc, setDoc, getDoc, onSnapshot } = window.firestoreApi;
+      const db = window.firebaseDb;
+      const appId = window.appId;
+
+      const getColRef = (colName) => collection(db, 'artifacts', appId, 'public', 'data', colName);
+
+      // Check system configuration / initialization status
+      try {
+        const metaDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config');
+        const metaSnap = await getDoc(metaDocRef);
+        const isClearedLocal = localStorage.getItem('maint_cleared') === 'true';
+        if (!metaSnap.exists() && !isClearedLocal) {
+          // Brand new database instance -> Seed initial default data once
+          await setDoc(metaDocRef, { initialized: true, isCleared: false, createdAt: new Date().toISOString() });
+          DEFAULT_INVENTORY.forEach(item => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id), item));
+          DEFAULT_MACHINES.forEach(item => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'machines', item.id), item));
+          DEFAULT_TECHNICIANS.forEach(item => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'technicians', item.id), item));
+          DEFAULT_TRANSACTIONS.forEach(item => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'transactions', item.id), item));
+        }
+      } catch (err) {
+        console.warn("Could not check system_meta status:", err);
+      }
+
+      // 1. Inventory Listener
+      onSnapshot(getColRef('inventory'), (snapshot) => {
+        if (isClearingData) return;
+        inventory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        refreshAllViews();
+      }, (err) => console.error("Firestore Inventory Snapshot Error:", err));
+
+      // 2. Machines Listener
+      onSnapshot(getColRef('machines'), (snapshot) => {
+        if (isClearingData) return;
+        machines = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        refreshAllViews();
+      }, (err) => console.error("Firestore Machines Snapshot Error:", err));
+
+      // 3. Technicians Listener
+      onSnapshot(getColRef('technicians'), (snapshot) => {
+        if (isClearingData) return;
+        technicians = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        refreshAllViews();
+      }, (err) => console.error("Firestore Technicians Snapshot Error:", err));
+
+      // 4. Transactions Listener
+      onSnapshot(getColRef('transactions'), (snapshot) => {
+        if (isClearingData) return;
+        transactions = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        refreshAllViews();
+      }, (err) => console.error("Firestore Transactions Snapshot Error:", err));
+
+      // 5. Deleted Logs Listener
+      onSnapshot(getColRef('deletedItems'), (snapshot) => {
+        if (isClearingData) return;
+        deletedItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        refreshAllViews();
+      }, (err) => console.error("Firestore DeletedItems Snapshot Error:", err));
+    };
+
+    function refreshAllViews() {
+      const badge = document.getElementById('deleted-count-badge');
+      if (badge) badge.textContent = deletedItems.length;
+      populateDropdowns();
+      updateDashboardData();
+      renderInventory();
+      renderMachines();
+      renderTechnicians();
+      renderLogs();
+      renderDeletedLogs();
+    }
+
+    // Helper functions to write to Cloud Firestore
+    async function syncItemToCloud(colName, item) {
+      if (window.firebaseDb && window.firestoreApi && window.firebaseAuth?.currentUser) {
+        const { doc, setDoc } = window.firestoreApi;
+        try {
+          await setDoc(doc(window.firebaseDb, 'artifacts', window.appId, 'public', 'data', colName, item.id), item);
+        } catch (e) { console.error(`Error saving ${colName}:`, e); }
+      }
+    }
+
+    async function deleteItemFromCloud(colName, itemId) {
+      if (window.firebaseDb && window.firestoreApi && window.firebaseAuth?.currentUser) {
+        const { doc, deleteDoc } = window.firestoreApi;
+        try {
+          await deleteDoc(doc(window.firebaseDb, 'artifacts', window.appId, 'public', 'data', colName, itemId));
+        } catch (e) { console.error(`Error deleting ${colName}:`, e); }
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem('maint_inventory', JSON.stringify(inventory));
+      localStorage.setItem('maint_machines', JSON.stringify(machines));
+      localStorage.setItem('maint_technicians', JSON.stringify(technicians));
+      localStorage.setItem('maint_transactions', JSON.stringify(transactions));
+      localStorage.setItem('maint_deleted', JSON.stringify(deletedItems));
+      
+      const badge = document.getElementById('deleted-count-badge');
+      if (badge) badge.textContent = deletedItems.length;
+    }
+
+    function confirmResetData() {
+      requestPasswordAuth("Reset System Data", "Are you sure you want to restore initial factory sample dataset? Enter password to authorize.", async () => {
+        localStorage.removeItem('maint_cleared');
+        isClearingData = true;
+
+        // Clear cloud items first
+        if (window.firebaseDb && window.firestoreApi && window.firebaseAuth?.currentUser) {
+          const { doc, collection, deleteDoc, getDocs, setDoc } = window.firestoreApi;
+          const db = window.firebaseDb;
+          const appId = window.appId;
+          
+          const collectionsToClear = ['inventory', 'machines', 'technicians', 'transactions', 'deletedItems'];
+          for (const colName of collectionsToClear) {
+            try {
+              const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+              const snapshot = await getDocs(colRef);
+              const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, d.id)));
+              await Promise.all(deletePromises);
+            } catch(e) { console.error(`Error resetting ${colName}:`, e); }
+          }
+
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config'), { isCleared: false, updatedAt: new Date().toISOString() });
+        }
+
+        inventory = JSON.parse(JSON.stringify(DEFAULT_INVENTORY));
+        machines = JSON.parse(JSON.stringify(DEFAULT_MACHINES));
+        technicians = JSON.parse(JSON.stringify(DEFAULT_TECHNICIANS));
+        transactions = JSON.parse(JSON.stringify(DEFAULT_TRANSACTIONS));
+        deletedItems = [];
+
+        localStorage.setItem('maint_initialized', 'true');
+
+        inventory.forEach(item => syncItemToCloud('inventory', item));
+        machines.forEach(item => syncItemToCloud('machines', item));
+        technicians.forEach(item => syncItemToCloud('technicians', item));
+        transactions.forEach(item => syncItemToCloud('transactions', item));
+
+        isClearingData = false;
+        saveState();
+        refreshAllViews();
+        showToast("System reset to default dataset across all connected clients!", "info");
+      });
+    }
+
+    function confirmClearAllData() {
+      requestPasswordAuth(
+        "Clear All Current System Data",
+        "WARNING: This will permanently wipe all active stock items, machines, technicians, transaction history, and logs. Enter password to confirm.",
+        async () => {
+          isClearingData = true;
+
+          inventory = [];
+          machines = [];
+          technicians = [];
+          transactions = [];
+          deletedItems = [];
+
+          localStorage.setItem('maint_inventory', JSON.stringify([]));
+          localStorage.setItem('maint_machines', JSON.stringify([]));
+          localStorage.setItem('maint_technicians', JSON.stringify([]));
+          localStorage.setItem('maint_transactions', JSON.stringify([]));
+          localStorage.setItem('maint_deleted', JSON.stringify([]));
+          localStorage.setItem('maint_initialized', 'true');
+          localStorage.setItem('maint_cleared', 'true');
+
+          refreshAllViews();
+
+          if (window.firebaseDb && window.firestoreApi) {
+            const { collection, doc, deleteDoc, getDocs, setDoc } = window.firestoreApi;
+            const db = window.firebaseDb;
+            const appId = window.appId;
+
+            try {
+              const metaDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config');
+              await setDoc(metaDocRef, { initialized: true, isCleared: true, updatedAt: new Date().toISOString() });
+
+              const collectionsToClear = ['inventory', 'machines', 'technicians', 'transactions', 'deletedItems'];
+              for (const colName of collectionsToClear) {
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+                const snapshot = await getDocs(colRef);
+                const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, d.id)));
+                await Promise.all(deletePromises);
+              }
+            } catch (e) {
+              console.error("Error clearing Firestore database:", e);
+            }
+          }
+
+          inventory = [];
+          machines = [];
+          technicians = [];
+          transactions = [];
+          deletedItems = [];
+
+          isClearingData = false;
+          refreshAllViews();
+
+          showToast("All system stock and transaction data wiped clean!", "amber");
+        }
+      );
+    }
+
+    function togglePasswordVis() {
+      const input = document.getElementById('auth-password-input');
+      const icon = document.getElementById('pwd-eye-icon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    function promptDeleteItem(partId) {
+      const part = inventory.find(p => p.id === partId);
+      if(!part) return;
+
+      requestPasswordAuth(
+        "Authorize Item Deletion",
+        `Deleting "${part.sku} - ${part.name}". Enter password to authorize deletion.`,
+        () => {
+          inventory = inventory.filter(p => p.id !== partId);
+          deleteItemFromCloud('inventory', partId);
+
+          const deletedRecord = {
+            ...part,
+            deletedAt: new Date().toISOString().replace('T', ' ').slice(0, 19)
+          };
+          deletedItems.push(deletedRecord);
+          syncItemToCloud('deletedItems', deletedRecord);
+          saveState();
+
+          refreshAllViews();
+          showToast(`Deleted ${part.sku} - ${part.name}. Item moved to Deleted Logs.`, "amber");
+        }
+      );
+    }
+
+    // --- DYNAMIC SEARCH & FILTER HELPERS FOR MODALS ---
+    function filterIssueParts() {
+      const query = document.getElementById('issue-part-search-input').value.toLowerCase();
+      const select = document.getElementById('issue-part-id');
+      const filteredParts = inventory.filter(p => 
+        p.sku.toLowerCase().includes(query) || 
+        p.name.toLowerCase().includes(query) || 
+        p.category.toLowerCase().includes(query) ||
+        (p.cupboard && p.cupboard.toLowerCase().includes(query)) ||
+        (p.rack && p.rack.toLowerCase().includes(query))
+      );
+      select.innerHTML = filteredParts.map(p => `<option value="${p.id}">${p.sku} - ${p.name} [Cat: ${p.category}] [${p.cupboard} / ${p.rack}] (Stock: ${p.qty})</option>`).join('');
+      updateIssueStockInfo();
+    }
+
+    function filterIssueMachines() {
+      const query = document.getElementById('issue-machine-search-input').value.toLowerCase();
+      const select = document.getElementById('issue-machine-id');
+      const filteredMachines = machines.filter(m => 
+        m.code.toLowerCase().includes(query) || 
+        m.name.toLowerCase().includes(query) || 
+        m.department.toLowerCase().includes(query)
+      );
+      select.innerHTML = filteredMachines.map(m => `<option value="${m.id}">${m.code} - ${m.name} (${m.department})</option>`).join('');
+    }
+
+    function filterReceiveParts() {
+      const query = document.getElementById('receive-part-search-input').value.toLowerCase();
+      const select = document.getElementById('receive-part-id');
+      const filteredParts = inventory.filter(p => 
+        p.sku.toLowerCase().includes(query) || 
+        p.name.toLowerCase().includes(query) || 
+        p.category.toLowerCase().includes(query) ||
+        (p.cupboard && p.cupboard.toLowerCase().includes(query)) ||
+        (p.rack && p.rack.toLowerCase().includes(query))
+      );
+      select.innerHTML = filteredParts.map(p => `<option value="${p.id}">${p.sku} - ${p.name} [Cat: ${p.category}] [${p.cupboard} / ${p.rack}] (Stock: ${p.qty})</option>`).join('');
+      updateReceiveLocationInfo();
+    }
+
+    function handleGlobalSearch(term) {
+      if(!term || !term.trim()) return;
+      const query = term.toLowerCase().trim();
+
+      // Check if matches SKU or part
+      const hasPartMatch = inventory.some(p => p.sku.toLowerCase().includes(query) || p.name.toLowerCase().includes(query));
+      if (hasPartMatch) {
+        switchTab('inventory');
+        document.getElementById('inv-search').value = term;
+        renderInventory();
+        return;
+      }
+
+      // Check if matches machine code or name
+      const hasMachineMatch = machines.some(m => m.code.toLowerCase().includes(query) || m.name.toLowerCase().includes(query));
+      if (hasMachineMatch) {
+        switchTab('machines');
+        document.getElementById('machine-search').value = term;
+        renderMachines();
+        return;
+      }
+    }
+
+    // --- TECHNICIAN REMOVAL LOGIC ---
+    function promptDeleteTech(techId) {
+      const tech = technicians.find(t => t.id === techId);
+      if(!tech) return;
+
+      requestPasswordAuth(
+        "Authorize Technician Removal",
+        `Deleting technician "${tech.name} (${tech.code})". Enter master password to confirm removal.`,
+        () => {
+          technicians = technicians.filter(t => t.id !== techId);
+          deleteItemFromCloud('technicians', techId);
+          saveState();
+
+          refreshAllViews();
+          showToast(`Technician ${tech.name} removed successfully!`, "amber");
+        }
+      );
+    }
+
+    function restoreDeletedItem(partId) {
+      const deletedRecord = deletedItems.find(p => p.id === partId);
+      if(!deletedRecord) return;
+
+      deletedItems = deletedItems.filter(p => p.id !== partId);
+      deleteItemFromCloud('deletedItems', partId);
+      
+      const { deletedAt, ...restoredPart } = deletedRecord;
+      inventory.push(restoredPart);
+      syncItemToCloud('inventory', restoredPart);
+      saveState();
+
+      refreshAllViews();
+      showToast(`Restored ${restoredPart.sku} - ${restoredPart.name} back to active stock!`, "success");
+    }
+
+    function promptClearDeletedHistory() {
+      if(deletedItems.length === 0) return;
+      requestPasswordAuth(
+        "Clear Deleted History Log",
+        "Permanently wipe all records from the Deleted Logs? Enter password to authorize.",
+        () => {
+          deletedItems.forEach(item => deleteItemFromCloud('deletedItems', item.id));
+          deletedItems = [];
+          saveState();
+          renderDeletedLogs();
+          showToast("Deleted history log cleared!", "info");
+        }
+      );
+    }
+
+    // --- EXCEL FILE READING & UPLOAD ---
+    function handleExcelFileSelect(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+
+      document.getElementById('excel-file-name').textContent = `File selected: ${file.name}`;
+      const reader = new FileReader();
+
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+          if(json.length === 0) {
+            showToast("Selected Excel file appears to be empty!", "error");
+            return;
+          }
+
+          // Parse and normalize spreadsheet rows
+          parsedExcelData = json.map(row => {
+            const getVal = (keys) => {
+              for(let k of keys) {
+                const matchedKey = Object.keys(row).find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+                if(matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== "") return row[matchedKey];
+              }
+              return "";
+            };
+
+            const sku = String(getVal(['SKU', 'Part Code', 'Code', 'Item SKU']) || `SKU-${Math.floor(1000 + Math.random() * 9000)}`).trim();
+            const name = String(getVal(['Part Name', 'Description', 'Part Description', 'Item Name', 'Name']) || 'Spare Part Item').trim();
+            const category = String(getVal(['Category', 'Dept', 'Group']) || 'General Spares').trim();
+            const qty = parseInt(getVal(['Qty', 'Quantity', 'Stock In', 'Initial Qty']) || 0);
+            const minQty = parseInt(getVal(['Min Qty', 'MinQty', 'Reorder Level', 'Min']) || 5);
+            const unitCost = parseFloat(getVal(['Unit Cost', 'Unit Price', 'Cost', 'Price']) || 0);
+            const cupboard = String(getVal(['Cupboard', 'Cupboard No', 'Cupboard Number', 'Location']) || 'Cupboard 01').trim();
+            const rack = String(getVal(['Rack', 'Rack No', 'Rack Number', 'Shelf']) || 'Rack A-01').trim();
+
+            return { sku, name, category, qty, minQty, unitCost, cupboard, rack };
+          }).filter(item => item.sku && item.qty > 0);
+
+          if(parsedExcelData.length === 0) {
+            showToast("Could not parse valid items! Ensure Excel header matches format.", "error");
+            return;
+          }
+
+          // Display preview
+          document.getElementById('excel-preview-container').classList.remove('hidden');
+          document.getElementById('excel-item-count').textContent = parsedExcelData.length;
+          document.getElementById('btn-confirm-excel-import').disabled = false;
+
+          document.getElementById('excel-preview-tbody').innerHTML = parsedExcelData.map(item => `
+            <tr class="hover:bg-slate-800">
+              <td class="p-2 font-mono text-cyan-400">${item.sku}</td>
+              <td class="p-2 font-semibold text-white">${item.name}</td>
+              <td class="p-2 text-slate-400">${item.category}</td>
+              <td class="p-2 text-cyan-300 font-mono">${item.cupboard}</td>
+              <td class="p-2 text-indigo-300 font-mono">${item.rack}</td>
+              <td class="p-2 text-right font-bold text-emerald-400">+${item.qty}</td>
+              <td class="p-2 text-right font-mono">Rs. ${item.unitCost.toFixed(2)}</td>
+            </tr>
+          `).join('');
+
+          showToast(`Successfully parsed ${parsedExcelData.length} items from Excel!`, "success");
+
+        } catch (err) {
+          console.error(err);
+          showToast("Failed to parse Excel file. Ensure file format is valid.", "error");
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function confirmExcelImport() {
+      if(parsedExcelData.length === 0) return;
+
+      let newAddedCount = 0;
+      let updatedCount = 0;
+      const today = new Date().toISOString().split('T')[0];
+
+      parsedExcelData.forEach(item => {
+        const existingIndex = inventory.findIndex(p => p.sku.toLowerCase() === item.sku.toLowerCase());
+
+        if (existingIndex > -1) {
+          // Top-up existing stock
+          inventory[existingIndex].qty += item.qty;
+          if(item.unitCost > 0) inventory[existingIndex].unitCost = item.unitCost;
+          if(item.cupboard) inventory[existingIndex].cupboard = item.cupboard;
+          if(item.rack) inventory[existingIndex].rack = item.rack;
+          updatedCount++;
+
+          syncItemToCloud('inventory', inventory[existingIndex]);
+
+          // Record stock-in transaction
+          const newTx = {
+            id: `TX-${Date.now()}-${Math.floor(Math.random()*100)}`,
+            date: today,
+            time: new Date().toTimeString().slice(0,5),
+            type: 'RECEIVE',
+            partId: inventory[existingIndex].id,
+            partName: inventory[existingIndex].name,
+            sku: inventory[existingIndex].sku,
+            cupboard: inventory[existingIndex].cupboard,
+            rack: inventory[existingIndex].rack,
+            qty: item.qty,
+            unitCost: inventory[existingIndex].unitCost,
+            totalCost: item.qty * inventory[existingIndex].unitCost,
+            machineId: '-',
+            machineName: '-',
+            techId: '-',
+            techName: 'Excel Import Batch',
+            workOrder: `EXCEL-IN-${today}`,
+            purpose: 'Batch Excel Stock In',
+            notes: 'Uploaded via spreadsheet stock-in import'
+          };
+          transactions.push(newTx);
+          syncItemToCloud('transactions', newTx);
+
+        } else {
+          // Register as brand new item
+          const newPart = {
+            id: `P${Date.now()}-${Math.floor(Math.random()*100)}`,
+            sku: item.sku,
+            name: item.name,
+            category: item.category,
+            qty: item.qty,
+            minQty: item.minQty,
+            unitCost: item.unitCost,
+            cupboard: item.cupboard,
+            rack: item.rack
+          };
+          inventory.push(newPart);
+          syncItemToCloud('inventory', newPart);
+          newAddedCount++;
+
+          // Record transaction
+          const newTx = {
+            id: `TX-${Date.now()}-${Math.floor(Math.random()*100)}`,
+            date: today,
+            time: new Date().toTimeString().slice(0,5),
+            type: 'RECEIVE',
+            partId: newPart.id,
+            partName: newPart.name,
+            sku: newPart.sku,
+            cupboard: newPart.cupboard,
+            rack: newPart.rack,
+            qty: item.qty,
+            unitCost: newPart.unitCost,
+            totalCost: item.qty * newPart.unitCost,
+            machineId: '-',
+            machineName: '-',
+            techId: '-',
+            techName: 'Excel Import Batch',
+            workOrder: `EXCEL-IN-${today}`,
+            purpose: 'New Excel Item Registration',
+            notes: 'Uploaded via spreadsheet stock-in import'
+          };
+          transactions.push(newTx);
+          syncItemToCloud('transactions', newTx);
+        }
+      });
+
+      saveState();
+      closeModal('excelUploadModal');
+
+      // Reset file input state
+      document.getElementById('excelFileInput').value = '';
+      document.getElementById('excel-file-name').textContent = 'Supports XLSX, XLS or CSV format';
+      document.getElementById('excel-preview-container').classList.add('hidden');
+      document.getElementById('btn-confirm-excel-import').disabled = true;
+      parsedExcelData = [];
+
+      refreshAllViews();
+      showToast(`Stock-In Complete! Updated ${updatedCount} existing items & added ${newAddedCount} new SKUs.`, "success");
+    }
+
+    function downloadSampleExcel() {
+      const sampleData = [
+        { "SKU": "SKU-2001", "Part Name": "Heavy Duty O-Ring Seal 50mm", "Category": "Seals & Gaskets", "Qty": 20, "Min Qty": 5, "Unit Cost": 4.50, "Cupboard": "Cupboard 02", "Rack": "Rack B-04" },
+        { "SKU": "SKU-2002", "Part Name": "Festo Pneumatic Fitting 8mm", "Category": "Pneumatics", "Qty": 15, "Min Qty": 10, "Unit Cost": 12.00, "Cupboard": "Cupboard 01", "Rack": "Rack C-01" },
+        { "SKU": "SKU-1001", "Part Name": "Heavy Duty V-Belt B-68", "Category": "Drive & Belts", "Qty": 10, "Min Qty": 10, "Unit Cost": 18.50, "Cupboard": "Cupboard 01", "Rack": "Rack A-02" }
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(sampleData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "StockInTemplate");
+      XLSX.writeFile(wb, "Maintenance_Stock_In_Template.xlsx");
+    }
+
+    // --- EXCEL MACHINE FILE READING & UPLOAD ---
+    function handleExcelMachineFileSelect(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+
+      document.getElementById('excel-machine-file-name').textContent = `File selected: ${file.name}`;
+      const reader = new FileReader();
+
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+          if(json.length === 0) {
+            showToast("Selected Excel file is empty!", "error");
+            return;
+          }
+
+          parsedMachineData = json.map(row => {
+            const getVal = (keys) => {
+              for(let k of keys) {
+                const matchedKey = Object.keys(row).find(rk => rk.trim().toLowerCase() === k.toLowerCase());
+                if(matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== "") return row[matchedKey];
+              }
+              return "";
+            };
+
+            const code = String(getVal(['Machine Code', 'Code', 'MCH Code', 'Machine Number', 'Machine No']) || `MCH-${Math.floor(100 + Math.random() * 900)}`).trim();
+            const name = String(getVal(['Machine Name', 'Model', 'Machine Brand', 'Name', 'Description']) || 'Industrial Machine').trim();
+            const department = String(getVal(['Department', 'Dept', 'Section']) || 'Maintenance Dept').trim();
+            const location = String(getVal(['Location', 'Bay', 'Plant', 'Area']) || 'Plant Floor').trim();
+
+            return { code, name, department, location };
+          }).filter(m => m.code && m.name);
+
+          if(parsedMachineData.length === 0) {
+            showToast("Could not parse valid machine records! Check header formatting.", "error");
+            return;
+          }
+
+          document.getElementById('excel-machine-preview-container').classList.remove('hidden');
+          document.getElementById('excel-machine-count').textContent = parsedMachineData.length;
+          document.getElementById('btn-confirm-excel-machine-import').disabled = false;
+
+          document.getElementById('excel-machine-preview-tbody').innerHTML = parsedMachineData.map(m => `
+            <tr class="hover:bg-slate-800">
+              <td class="p-2 font-mono text-cyan-400 font-semibold">${m.code}</td>
+              <td class="p-2 font-semibold text-white">${m.name}</td>
+              <td class="p-2 text-slate-300">${m.department}</td>
+              <td class="p-2 text-indigo-300">${m.location}</td>
+            </tr>
+          `).join('');
+
+          showToast(`Parsed ${parsedMachineData.length} machine records from file!`, "success");
+
+        } catch (err) {
+          console.error(err);
+          showToast("Failed to parse Excel file.", "error");
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function confirmExcelMachineImport() {
+      if(parsedMachineData.length === 0) return;
+
+      let newCount = 0;
+      let updateCount = 0;
+
+      parsedMachineData.forEach(item => {
+        const existingIdx = machines.findIndex(m => m.code.toLowerCase() === item.code.toLowerCase());
+
+        if(existingIdx > -1) {
+          machines[existingIdx].name = item.name;
+          machines[existingIdx].department = item.department;
+          machines[existingIdx].location = item.location;
+          syncItemToCloud('machines', machines[existingIdx]);
+          updateCount++;
+        } else {
+          const newMch = {
+            id: `MCH-${Date.now()}-${Math.floor(Math.random()*100)}`,
+            code: item.code,
+            name: item.name,
+            department: item.department,
+            location: item.location
+          };
+          machines.push(newMch);
+          syncItemToCloud('machines', newMch);
+          newCount++;
+        }
+      });
+
+      saveState();
+      closeModal('excelMachineUploadModal');
+
+      // Reset file upload state
+      document.getElementById('excelMachineFileInput').value = '';
+      document.getElementById('excel-machine-file-name').textContent = 'Supports XLSX, XLS or CSV format';
+      document.getElementById('excel-machine-preview-container').classList.add('hidden');
+      document.getElementById('btn-confirm-excel-machine-import').disabled = true;
+      parsedMachineData = [];
+
+      refreshAllViews();
+      showToast(`Machine Import Complete! Registered ${newCount} new machines & updated ${updateCount}.`, "success");
+    }
+
+    function downloadSampleMachineExcel() {
+      const sampleData = [
+        { "Machine Code": "MCH-007", "Machine Name": "Fongs Labwin 06 Dyeing Machine", "Department": "Yarn Dyeing", "Location": "Yarn Plant - Lab Area" },
+        { "Machine Code": "MCH-008", "Machine Name": "Kinwah KW807SJ400F Finishing Unit", "Department": "Exhaust Dyeing", "Location": "Finishing Line 2" },
+        { "Machine Code": "MCH-001", "Machine Name": "Muller NF 42 Weaving Loom", "Department": "Weaving Dept", "Location": "Plant 1 - Line 2" }
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(sampleData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "MachinesTemplate");
+      XLSX.writeFile(wb, "Maintenance_Machines_Import_Template.xlsx");
+    }
+
+    // --- FORM SUBMISSIONS ---
+
+    // 1. Issue Part Form
+    function handleIssueSubmit(e) {
+      e.preventDefault();
+      const partId = document.getElementById('issue-part-id').value;
+      const qty = parseInt(document.getElementById('issue-qty').value);
+      const machineId = document.getElementById('issue-machine-id').value;
+      const techId = document.getElementById('issue-tech-id').value;
+      const wo = document.getElementById('issue-wo').value;
+      const purpose = document.getElementById('issue-purpose').value;
+      const date = document.getElementById('issue-date').value;
+      const notes = document.getElementById('issue-notes').value;
+
+      const part = inventory.find(p => p.id === partId);
+      const machine = machines.find(m => m.id === machineId);
+      const tech = technicians.find(t => t.id === techId);
+
+      if(!part || qty > part.qty) {
+        showToast("Cannot issue! Requested quantity exceeds available stock.", "error");
+        return;
+      }
+
+      part.qty -= qty;
+      syncItemToCloud('inventory', part);
+
+      const totalCost = qty * part.unitCost;
+      const newTx = {
+        id: `TX-${Date.now()}`,
+        date: date || new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0,5),
+        type: 'ISSUE',
+        partId: part.id,
+        partName: part.name,
+        sku: part.sku,
+        cupboard: part.cupboard,
+        rack: part.rack,
+        qty: qty,
+        unitCost: part.unitCost,
+        totalCost: totalCost,
+        machineId: machine ? machine.id : '-',
+        machineName: machine ? machine.name : 'General Maintenance',
+        techId: tech ? tech.id : '-',
+        techName: tech ? tech.name : 'Unassigned',
+        workOrder: wo || `WO-${Math.floor(1000 + Math.random() * 9000)}`,
+        purpose: purpose,
+        notes: notes
+      };
+
+      transactions.push(newTx);
+      syncItemToCloud('transactions', newTx);
+      saveState();
+
+      closeModal('issueModal');
+      refreshAllViews();
+
+      showToast(`Issued ${qty} unit(s) of ${part.name} [${part.cupboard} / ${part.rack}] to ${machine ? machine.name : 'Technician'}.`, "success");
+    }
+
+    // 2. Receive Stock Form
+    function handleReceiveSubmit(e) {
+      e.preventDefault();
+      const partId = document.getElementById('receive-part-id').value;
+      const qty = parseInt(document.getElementById('receive-qty').value);
+      const customPrice = parseFloat(document.getElementById('receive-price').value);
+      const grn = document.getElementById('receive-grn').value;
+      const supplier = document.getElementById('receive-supplier').value;
+      const techId = document.getElementById('receive-tech-id').value;
+      const date = document.getElementById('receive-date').value;
+      const notes = document.getElementById('receive-notes').value;
+
+      const part = inventory.find(p => p.id === partId);
+      const tech = technicians.find(t => t.id === techId);
+
+      if(!part) return;
+
+      if(!isNaN(customPrice) && customPrice > 0) {
+        part.unitCost = customPrice;
+      }
+
+      part.qty += qty;
+      syncItemToCloud('inventory', part);
+
+      const totalCost = qty * part.unitCost;
+      const newTx = {
+        id: `TX-${Date.now()}`,
+        date: date || new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0,5),
+        type: 'RECEIVE',
+        partId: part.id,
+        partName: part.name,
+        sku: part.sku,
+        cupboard: part.cupboard,
+        rack: part.rack,
+        qty: qty,
+        unitCost: part.unitCost,
+        totalCost: totalCost,
+        machineId: '-',
+        machineName: '-',
+        techId: tech ? tech.id : '-',
+        techName: tech ? tech.name : 'Storekeeper',
+        workOrder: grn || `GRN-${Math.floor(10000 + Math.random() * 90000)}`,
+        purpose: supplier ? `Received from ${supplier}` : 'Stock Replenishment',
+        notes: notes
+      };
+
+      transactions.push(newTx);
+      syncItemToCloud('transactions', newTx);
+      saveState();
+
+      closeModal('receiveModal');
+      refreshAllViews();
+
+      showToast(`Restocked ${qty} unit(s) of ${part.name}. Total: ${part.qty}`, "success");
+    }
+
+    // 3. Add New Spare Part Form
+    function handleAddPartSubmit(e) {
+      e.preventDefault();
+      const sku = document.getElementById('part-sku').value.trim();
+      const category = document.getElementById('part-category').value.trim();
+      const name = document.getElementById('part-name').value.trim();
+      const qty = parseInt(document.getElementById('part-qty').value);
+      const minQty = parseInt(document.getElementById('part-min').value);
+      const cost = parseFloat(document.getElementById('part-cost').value);
+      const cupboard = document.getElementById('part-cupboard').value.trim();
+      const rack = document.getElementById('part-rack').value.trim();
+
+      const newPart = {
+        id: `P${Date.now()}`,
+        sku: sku,
+        name: name,
+        category: category,
+        qty: qty,
+        minQty: minQty,
+        unitCost: cost,
+        cupboard: cupboard || 'Cupboard 01',
+        rack: rack || 'Rack A-01'
+      };
+
+      inventory.push(newPart);
+      syncItemToCloud('inventory', newPart);
+      saveState();
+
+      closeModal('addPartModal');
+      refreshAllViews();
+
+      showToast(`New Spare Part ${sku} registered at ${cupboard} / ${rack}!`, "success");
+    }
+
+    // 4. Add Machine Form
+    function handleAddMachineSubmit(e) {
+      e.preventDefault();
+      const code = document.getElementById('mch-code').value.trim();
+      const name = document.getElementById('mch-name').value.trim();
+      const dept = document.getElementById('mch-dept').value.trim();
+      const location = document.getElementById('mch-location').value.trim();
+
+      const newMch = {
+        id: `MCH-${Date.now()}`,
+        code: code,
+        name: name,
+        department: dept,
+        location: location
+      };
+
+      machines.push(newMch);
+      syncItemToCloud('machines', newMch);
+      saveState();
+
+      closeModal('addMachineModal');
+      refreshAllViews();
+      showToast(`Machine ${code} registered!`, "success");
+    }
+
+    // 5. Add Technician Form
+    function handleAddTechSubmit(e) {
+      e.preventDefault();
+      const code = document.getElementById('tech-code').value.trim();
+      const name = document.getElementById('tech-name').value.trim();
+      const role = document.getElementById('tech-role').value.trim();
+      const dept = document.getElementById('tech-dept').value.trim();
+
+      const newTech = {
+        id: `TECH-${Date.now()}`,
+        code: code,
+        name: name,
+        role: role,
+        department: dept || 'Maintenance'
+      };
+
+      technicians.push(newTech);
+      syncItemToCloud('technicians', newTech);
+      saveState();
+
+      closeModal('addTechModal');
+      refreshAllViews();
+      showToast(`Technician ${name} registered!`, "success");
+    }
+
+    // --- QUICK ACTION MODAL HELPERS ---
+    function quickIssueModal(partId) {
+      openModal('issueModal');
+      document.getElementById('issue-part-id').value = partId;
+      updateIssueStockInfo();
+    }
+
+    function quickReceiveModal(partId) {
+      openModal('receiveModal');
+      document.getElementById('receive-part-id').value = partId;
+      updateReceiveLocationInfo();
+    }
+
+    // --- DRILLDOWN HISTORIES ---
+    function openMachineHistory(machineId) {
+      const machine = machines.find(m => m.id === machineId);
+      if(!machine) return;
+
+      const mTx = transactions.filter(t => t.machineId === machineId && t.type === 'ISSUE');
+
+      document.getElementById('details-modal-title').textContent = `Maintenance History: ${machine.name}`;
+      document.getElementById('details-modal-subtitle').textContent = `Code: ${machine.code} | Dept: ${machine.department}`;
+      document.getElementById('details-total-count').textContent = `Total ${mTx.length} maintenance part replacement records`;
+
+      const tbody = document.getElementById('details-modal-tbody');
+      if(mTx.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No parts issued to this machine yet.</td></tr>`;
+      } else {
+        tbody.innerHTML = mTx.map(t => `
+          <tr class="hover:bg-slate-700/30">
+            <td class="py-2.5 px-3 font-mono text-xs text-slate-400">${t.date}</td>
+            <td class="py-2.5 px-3 font-mono text-xs text-cyan-400">${t.workOrder}</td>
+            <td class="py-2.5 px-3 font-medium text-white">${t.partName} <span class="text-xs text-slate-400">(${t.sku})</span></td>
+            <td class="py-2.5 px-3 text-xs"><span class="text-cyan-300 font-mono">${t.cupboard||'-'}</span> / <span class="text-indigo-300 font-mono">${t.rack||'-'}</span></td>
+            <td class="py-2.5 px-3 text-slate-300 text-xs">${t.techName}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-amber-400">${t.qty}</td>
+            <td class="py-2.5 px-3 text-right font-mono text-emerald-400">Rs. ${t.totalCost.toFixed(2)}</td>
+          </tr>
+        `).join('');
+      }
+
+      openModal('detailsModal');
+    }
+
+    function openTechHistory(techId) {
+      const tech = technicians.find(t => t.id === techId);
+      if(!tech) return;
+
+      const tTx = transactions.filter(t => t.techId === techId && t.type === 'ISSUE');
+
+      document.getElementById('details-modal-title').textContent = `Technician Log: ${tech.name}`;
+      document.getElementById('details-modal-subtitle').textContent = `${tech.role} | ${tech.code}`;
+      document.getElementById('details-total-count').textContent = `Total ${tTx.length} items checked out by technician`;
+
+      const tbody = document.getElementById('details-modal-tbody');
+      if(tTx.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No transactions recorded for this technician yet.</td></tr>`;
+      } else {
+        tbody.innerHTML = tTx.map(t => `
+          <tr class="hover:bg-slate-700/30">
+            <td class="py-2.5 px-3 font-mono text-xs text-slate-400">${t.date}</td>
+            <td class="py-2.5 px-3 font-mono text-xs text-cyan-400">${t.workOrder}</td>
+            <td class="py-2.5 px-3 font-medium text-white">${t.partName}</td>
+            <td class="py-2.5 px-3 text-xs"><span class="text-cyan-300 font-mono">${t.cupboard||'-'}</span> / <span class="text-indigo-300 font-mono">${t.rack||'-'}</span></td>
+            <td class="py-2.5 px-3 text-slate-300 text-xs">${t.machineName}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-amber-400">${t.qty}</td>
+            <td class="py-2.5 px-3 text-right font-mono text-emerald-400">Rs. ${t.totalCost.toFixed(2)}</td>
+          </tr>
+        `).join('');
+      }
+
+      openModal('detailsModal');
+    }
+
+    // --- MODAL CONTROLS ---
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
+
+    // --- CSV EXPORT ---
+    function exportCSV(type) {
+      let csvContent = "data:text/csv;charset=utf-8,";
+      
+      if(type === 'inventory') {
+        csvContent += "SKU,Part Description,Category,Cupboard Number,Rack Number,Available Stock,Reorder Level,Unit Cost (Rs.),Total Value (Rs.)\n";
+        inventory.forEach(p => {
+          csvContent += `"${p.sku}","${p.name}","${p.category}","${p.cupboard || ''}","${p.rack || ''}",${p.qty},${p.minQty},${p.unitCost},${p.qty * p.unitCost}\n`;
+        });
+      } else if(type === 'logs') {
+        csvContent += "Date,Time,Type,Work Order/GRN,SKU,Part Description,Cupboard,Rack,Target Machine,Technician,Qty,Unit Cost (Rs.),Total Cost (Rs.),Purpose/Notes\n";
+        transactions.forEach(t => {
+          csvContent += `"${t.date}","${t.time || ''}","${t.type}","${t.workOrder || t.GRN || ''}","${t.sku}","${t.partName}","${t.cupboard || ''}","${t.rack || ''}","${t.machineName || ''}","${t.techName || ''}",${t.qty},${t.unitCost},${t.totalCost},"${t.purpose || ''} - ${t.notes || ''}"\n`;
+        });
+      }
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `maint_track_${type}_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast(`Exported ${type} to CSV successfully!`, "info");
+    }
+  </script>
+</body>
+</html>
