@@ -108,6 +108,11 @@
             <span>Upload Excel</span>
           </button>
 
+          <button onclick="openModal('backupRestoreModal')" class="bg-indigo-700 hover:bg-indigo-600 text-white px-3 sm:px-4 py-2 rounded-lg font-semibold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 transform active:scale-95 border border-indigo-500/40">
+            <i class="fa-solid fa-database"></i>
+            <span class="hidden sm:inline">Backup & Restore</span>
+          </button>
+
           <button onclick="confirmClearAllData()" title="Clear / Wipe All System Data" class="bg-rose-900/50 hover:bg-rose-800 text-rose-300 px-3 py-2 rounded-lg font-semibold text-xs sm:text-sm transition-all flex items-center gap-1.5 border border-rose-700/60">
             <i class="fa-solid fa-broom"></i>
             <span class="hidden lg:inline">Clear All Data</span>
@@ -1010,6 +1015,76 @@
     </div>
   </div>
 
+  <!-- MODAL 9: BACKUP & RESTORE DATA -->
+  <div id="backupRestoreModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-indigo-500/20 text-indigo-400 p-2.5 rounded-xl border border-indigo-500/30">
+            <i class="fa-solid fa-database text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100 text-lg">Backup & Restore Data</h3>
+            <p class="text-xs text-slate-400">Export system records to JSON or restore database from backup file</p>
+          </div>
+        </div>
+        <button onclick="closeModal('backupRestoreModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Section 1: Backup / Export -->
+      <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 space-y-2">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h4 class="font-bold text-white text-sm flex items-center gap-2">
+              <i class="fa-solid fa-download text-cyan-400"></i> Export Full System Backup
+            </h4>
+            <p class="text-xs text-slate-400">Save all stock items, machines, technicians, and logs to JSON format.</p>
+          </div>
+          <button onclick="exportFullBackup()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition-all whitespace-nowrap">
+            <i class="fa-solid fa-file-arrow-down"></i> Backup Now
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 2: Restore / Import -->
+      <div class="bg-slate-900/60 border border-slate-700/80 rounded-xl p-4 space-y-3">
+        <h4 class="font-bold text-white text-sm flex items-center gap-2">
+          <i class="fa-solid fa-upload text-indigo-400"></i> Restore System from Backup
+        </h4>
+        <p class="text-xs text-slate-400">Upload a `.json` backup file to restore database state. Master password required.</p>
+
+        <!-- Drag/Drop or Select File -->
+        <div class="border-2 border-dashed border-slate-700 hover:border-indigo-500 rounded-xl p-4 text-center cursor-pointer bg-slate-900/50 transition-colors" onclick="document.getElementById('jsonBackupInput').click()">
+          <input type="file" id="jsonBackupInput" accept=".json" class="hidden" onchange="handleBackupFileSelect(event)">
+          <i class="fa-solid fa-file-code text-2xl text-indigo-400 mb-1"></i>
+          <p class="text-xs font-semibold text-white">Select JSON Backup File</p>
+          <p class="text-[11px] text-slate-400" id="backup-file-name">Supports .json backup format</p>
+        </div>
+
+        <!-- Parsed Summary Info -->
+        <div id="backup-summary-container" class="hidden bg-slate-800 p-3 rounded-lg border border-indigo-500/30 text-xs text-slate-300 space-y-1">
+          <div class="font-semibold text-indigo-300 flex items-center justify-between">
+            <span>Parsed Backup File Details</span>
+            <span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-mono" id="backup-timestamp">Date: -</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-center">
+            <div class="bg-slate-900 p-1.5 rounded"><span id="bk-inv-count" class="text-cyan-400 font-bold">0</span> <p class="text-[10px] text-slate-400">SKUs</p></div>
+            <div class="bg-slate-900 p-1.5 rounded"><span id="bk-mch-count" class="text-amber-400 font-bold">0</span> <p class="text-[10px] text-slate-400">Machines</p></div>
+            <div class="bg-slate-900 p-1.5 rounded"><span id="bk-tech-count" class="text-indigo-400 font-bold">0</span> <p class="text-[10px] text-slate-400">Techs</p></div>
+            <div class="bg-slate-900 p-1.5 rounded"><span id="bk-tx-count" class="text-emerald-400 font-bold">0</span> <p class="text-[10px] text-slate-400">Logs</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+        <button type="button" onclick="closeModal('backupRestoreModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Close</button>
+        <button type="button" id="btn-confirm-restore" disabled onclick="confirmRestoreBackup()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm shadow flex items-center gap-2">
+          <i class="fa-solid fa-rotate-left"></i> Restore Data
+        </button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- JAVASCRIPT APPLICATION LOGIC -->
   <!-- Firebase SDK Module Import -->
@@ -1794,6 +1869,7 @@
 
     let parsedExcelData = [];
     let parsedMachineData = [];
+    let parsedBackupData = null;
     let pendingAuthCallback = null;
     let isClearingData = false;
 
@@ -2510,6 +2586,134 @@
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "MachinesTemplate");
       XLSX.writeFile(wb, "Maintenance_Machines_Import_Template.xlsx");
+    }
+
+    // --- BACKUP & RESTORE SYSTEM ---
+    function exportFullBackup() {
+      const backupData = {
+        app: "MaintiTrack Pro",
+        version: "2.0",
+        exportDate: new Date().toISOString(),
+        inventory: inventory,
+        machines: machines,
+        technicians: technicians,
+        transactions: transactions,
+        deletedItems: deletedItems
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const link = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0];
+      link.setAttribute("href", dataStr);
+      link.setAttribute("download", `MaintiTrack_Backup_${dateStr}.json`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      showToast("Full system backup JSON file generated and downloaded!", "success");
+    }
+
+    function handleBackupFileSelect(e) {
+      const file = e.target.files[0];
+      if(!file) return;
+
+      document.getElementById('backup-file-name').textContent = `File selected: ${file.name}`;
+      const reader = new FileReader();
+
+      reader.onload = function(evt) {
+        try {
+          const json = JSON.parse(evt.target.result);
+          if(!json || typeof json !== 'object') {
+            showToast("Invalid JSON backup structure!", "error");
+            return;
+          }
+
+          parsedBackupData = {
+            inventory: Array.isArray(json.inventory) ? json.inventory : [],
+            machines: Array.isArray(json.machines) ? json.machines : [],
+            technicians: Array.isArray(json.technicians) ? json.technicians : [],
+            transactions: Array.isArray(json.transactions) ? json.transactions : [],
+            deletedItems: Array.isArray(json.deletedItems) ? json.deletedItems : []
+          };
+
+          document.getElementById('backup-summary-container').classList.remove('hidden');
+          document.getElementById('backup-timestamp').textContent = json.exportDate ? `Exported: ${json.exportDate.slice(0, 10)}` : 'Backup File';
+          document.getElementById('bk-inv-count').textContent = parsedBackupData.inventory.length;
+          document.getElementById('bk-mch-count').textContent = parsedBackupData.machines.length;
+          document.getElementById('bk-tech-count').textContent = parsedBackupData.technicians.length;
+          document.getElementById('bk-tx-count').textContent = parsedBackupData.transactions.length;
+
+          document.getElementById('btn-confirm-restore').disabled = false;
+          showToast("Backup file parsed successfully! Click Restore Data to proceed.", "info");
+        } catch(err) {
+          console.error(err);
+          showToast("Failed to parse JSON backup file.", "error");
+        }
+      };
+
+      reader.readAsText(file);
+    }
+
+    function confirmRestoreBackup() {
+      if(!parsedBackupData) return;
+
+      requestPasswordAuth(
+        "Authorize System Database Restore",
+        "WARNING: Restoring backup will replace existing live stock, machines, and transaction records. Enter master password to authorize.",
+        async () => {
+          isClearingData = true;
+
+          // 1. Purge existing cloud collections first
+          if (window.firebaseDb && window.firestoreApi && window.firebaseAuth?.currentUser) {
+            const { doc, collection, deleteDoc, getDocs, setDoc } = window.firestoreApi;
+            const db = window.firebaseDb;
+            const appId = window.appId;
+
+            const collectionsToClear = ['inventory', 'machines', 'technicians', 'transactions', 'deletedItems'];
+            for (const colName of collectionsToClear) {
+              try {
+                const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+                const snapshot = await getDocs(colRef);
+                const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, d.id)));
+                await Promise.all(deletePromises);
+              } catch(e) { console.error(`Error purging ${colName}:`, e); }
+            }
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config'), { isCleared: false, restoredAt: new Date().toISOString() });
+          }
+
+          // 2. Load restored state into memory
+          inventory = [...parsedBackupData.inventory];
+          machines = [...parsedBackupData.machines];
+          technicians = [...parsedBackupData.technicians];
+          transactions = [...parsedBackupData.transactions];
+          deletedItems = [...parsedBackupData.deletedItems];
+
+          localStorage.setItem('maint_initialized', 'true');
+          localStorage.removeItem('maint_cleared');
+
+          // 3. Upload all restored documents to Firebase Cloud Firestore
+          inventory.forEach(item => syncItemToCloud('inventory', item));
+          machines.forEach(item => syncItemToCloud('machines', item));
+          technicians.forEach(item => syncItemToCloud('technicians', item));
+          transactions.forEach(item => syncItemToCloud('transactions', item));
+          deletedItems.forEach(item => syncItemToCloud('deletedItems', item));
+
+          isClearingData = false;
+          saveState();
+          closeModal('backupRestoreModal');
+
+          // Reset modal inputs
+          document.getElementById('jsonBackupInput').value = '';
+          document.getElementById('backup-file-name').textContent = 'Supports .json backup format';
+          document.getElementById('backup-summary-container').classList.add('hidden');
+          document.getElementById('btn-confirm-restore').disabled = true;
+          parsedBackupData = null;
+
+          refreshAllViews();
+          showToast("System database successfully restored from backup!", "success");
+        }
+      );
     }
 
     // --- FORM SUBMISSIONS ---
