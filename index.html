@@ -77,9 +77,9 @@
               <h1 class="text-lg font-bold text-white tracking-wide">MaintiTrack Pro</h1>
               <span class="bg-cyan-500/20 text-cyan-300 text-xs px-2 py-0.5 rounded-full font-medium border border-cyan-500/30">Maintenance Hub</span>
               <!-- Live Real-Time Database Status Badge -->
-              <span id="db-status-badge" class="bg-amber-500/20 text-amber-300 text-xs px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1 transition-all">
+              <button type="button" onclick="openModal('dbRulesModal')" id="db-status-badge" title="Click to view Database Connection & Security Rules" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-xs px-2.5 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1.5 transition-all cursor-pointer">
                 <i class="fa-solid fa-spinner fa-spin text-[10px]"></i> Connecting DB...
-              </span>
+              </button>
             </div>
             <p class="text-xs text-slate-400">Spare Parts, Issuing, Cupboard & Rack Tracking</p>
           </div>
@@ -143,6 +143,11 @@
       <button onclick="switchTab('inventory')" id="tab-inventory" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50">
         <i class="fa-solid fa-boxes-stacked"></i>
         <span>Stock Inventory</span>
+      </button>
+      <button onclick="switchTab('tools')" id="tab-tools" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50">
+        <i class="fa-solid fa-wrench text-amber-400"></i>
+        <span>Tools Tracking</span>
+        <span id="active-loans-badge" class="bg-amber-500/20 text-amber-300 text-xs px-1.5 py-0.5 rounded-full font-mono">0 In Use</span>
       </button>
       <button onclick="switchTab('machines')" id="tab-machines" class="tab-btn flex-1 min-w-[120px] py-2.5 px-3 rounded-lg font-medium text-xs sm:text-sm transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white hover:bg-slate-700/50">
         <i class="fa-solid fa-industry"></i>
@@ -272,17 +277,13 @@
         </div>
 
         <div class="flex items-center gap-2 w-full md:w-auto justify-end">
-          <button onclick="openModal('excelUploadModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all shadow">
-            <i class="fa-solid fa-file-excel"></i>
-            <span>Excel Stock In</span>
-          </button>
           <button onclick="openModal('addPartModal')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3.5 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all">
             <i class="fa-solid fa-plus"></i>
-            <span>Add Part</span>
+            <span>Add Spare Part</span>
           </button>
-          <button onclick="exportCSV('inventory')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3.5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+          <button onclick="exportCSV('inventory')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-all">
             <i class="fa-solid fa-file-csv"></i>
-            <span>Export CSV</span>
+            <span>CSV</span>
           </button>
         </div>
       </div>
@@ -296,16 +297,211 @@
                 <th class="py-3 px-4">SKU / Code</th>
                 <th class="py-3 px-4">Part Description</th>
                 <th class="py-3 px-4">Category</th>
-                <th class="py-3 px-4">Cupboard #</th>
-                <th class="py-3 px-4">Rack #</th>
-                <th class="py-3 px-4 text-center">Available Stock</th>
-                <th class="py-3 px-4 text-center">Min Reorder</th>
-                <th class="py-3 px-4 text-right">Unit Price (Rs.)</th>
-                <th class="py-3 px-4 text-right">Total Value (Rs.)</th>
+                <th class="py-3 px-4">Cupboard</th>
+                <th class="py-3 px-4">Rack</th>
+                <th class="py-3 px-4 text-center">In Stock</th>
+                <th class="py-3 px-4 text-center">Min Qty</th>
+                <th class="py-3 px-4 text-right">Unit Cost (Rs.)</th>
+                <th class="py-3 px-4 text-right">Total Val (Rs.)</th>
                 <th class="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody id="inventory-tbody" class="divide-y divide-slate-700/50">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2.5: TOOLS TRACKING -->
+    <div id="view-tools" class="hidden space-y-4">
+      <!-- Tools Metric Summary Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-800/80 border border-slate-700/70 p-3.5 rounded-xl flex items-center gap-3">
+          <div class="bg-amber-500/20 text-amber-400 p-2.5 rounded-lg border border-amber-500/30">
+            <i class="fa-solid fa-toolbox text-xl"></i>
+          </div>
+          <div>
+            <p class="text-[11px] text-slate-400 uppercase font-semibold">Total Tools</p>
+            <h4 class="text-xl font-bold text-white" id="tools-total-count">0</h4>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/80 border border-slate-700/70 p-3.5 rounded-xl flex items-center gap-3">
+          <div class="bg-cyan-500/20 text-cyan-400 p-2.5 rounded-lg border border-cyan-500/30">
+            <i class="fa-solid fa-warehouse text-xl"></i>
+          </div>
+          <div>
+            <p class="text-[11px] text-slate-400 uppercase font-semibold">Common Tools</p>
+            <h4 class="text-xl font-bold text-white" id="tools-common-count">0</h4>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/80 border border-slate-700/70 p-3.5 rounded-xl flex items-center gap-3">
+          <div class="bg-indigo-500/20 text-indigo-400 p-2.5 rounded-lg border border-indigo-500/30">
+            <i class="fa-solid fa-boxes-packing text-xl"></i>
+          </div>
+          <div>
+            <p class="text-[11px] text-slate-400 uppercase font-semibold" id="tools-boxes-label">Toolboxes</p>
+            <h4 class="text-xl font-bold text-white" id="tools-boxes-count">0</h4>
+          </div>
+        </div>
+
+        <div class="bg-slate-800/80 border border-slate-700/70 p-3.5 rounded-xl flex items-center gap-3">
+          <div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-lg border border-emerald-500/30">
+            <i class="fa-solid fa-hand-holding-hand text-xl"></i>
+          </div>
+          <div>
+            <p class="text-[11px] text-slate-400 uppercase font-semibold">Currently In Use</p>
+            <h4 class="text-xl font-bold text-amber-400" id="tools-in-use-count">0</h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbox-Wise Monitoring Cards (Toolbox 1 to 5 & Custom Sets) -->
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-2.5">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-toolbox text-amber-400"></i> Toolbox-Wise Issue & Receive Status
+            </h3>
+            <p class="text-xs text-slate-400">Toolbox tools are issued and received as a complete toolbox unit per technician</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <button onclick="openModal('excelToolUploadModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition-all">
+              <i class="fa-solid fa-file-excel"></i> Upload Tools / Toolbox Excel
+            </button>
+            <button onclick="openToolCheckoutMode('TOOLBOX')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition-all">
+              <i class="fa-solid fa-boxes-packing"></i> Issue Complete Toolbox
+            </button>
+          </div>
+        </div>
+        <div id="toolboxes-status-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- Tools Toolbar -->
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl p-4 flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div class="flex flex-wrap flex-1 gap-2.5 w-full md:w-auto items-center">
+          <!-- Search -->
+          <div class="relative flex-1 min-w-[200px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="tool-search" oninput="renderTools()" placeholder="Search Tool Name, Specification (e.g. 17mm, Allenkey)..." class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-500">
+          </div>
+          <!-- Toolbox / Location Filter -->
+          <select id="tool-location-filter" onchange="renderTools()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Locations & Toolboxes</option>
+            <option value="Common Tools">Common Tools (Issue Tool-Wise)</option>
+            <option value="Toolbox 1">Toolbox 1 (Issue Toolbox-Wise)</option>
+            <option value="Toolbox 2">Toolbox 2 (Issue Toolbox-Wise)</option>
+            <option value="Toolbox 3">Toolbox 3 (Issue Toolbox-Wise)</option>
+            <option value="Toolbox 4">Toolbox 4 (Issue Toolbox-Wise)</option>
+            <option value="Toolbox 5">Toolbox 5 (Issue Toolbox-Wise)</option>
+          </select>
+          <!-- Status Filter -->
+          <select id="tool-status-filter" onchange="renderTools()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+            <option value="ALL">All Status</option>
+            <option value="AVAILABLE">Available Now</option>
+            <option value="ISSUED">Issued / In Use</option>
+            <option value="ZERO">Zero Stock (0)</option>
+          </select>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+          <button onclick="openToolCheckoutMode('TOOL')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all shadow">
+            <i class="fa-solid fa-wrench"></i>
+            <span>Issue Common Tool</span>
+          </button>
+          <button onclick="openToolCheckoutMode('TOOLBOX')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all shadow">
+            <i class="fa-solid fa-toolbox"></i>
+            <span>Issue Toolbox</span>
+          </button>
+          <button onclick="openModal('excelToolUploadModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all shadow">
+            <i class="fa-solid fa-file-excel"></i>
+            <span>Upload Tools Excel</span>
+          </button>
+          <button onclick="openModal('addToolModal')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all">
+            <i class="fa-solid fa-plus"></i>
+            <span>Add Tool</span>
+          </button>
+          <button onclick="exportCSV('tools')" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium flex items-center gap-1.5 transition-all">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Tool & Toolbox Loans Monitor (Pending Receive) -->
+      <div id="active-loans-banner" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs sm:text-sm font-bold text-amber-300 flex items-center gap-2">
+            <i class="fa-solid fa-bell animate-bounce"></i> Active Issued Tools & Toolboxes (Pending Receive from Technician)
+          </span>
+          <span class="text-xs font-semibold bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-500/30" id="active-loans-summary">0 active issues</span>
+        </div>
+        <div id="active-loans-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- Tools Table -->
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-slate-300">
+            <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-4">Tool Name</th>
+                <th class="py-3 px-4">Specification / Size</th>
+                <th class="py-3 px-4">Location & Issue Mode</th>
+                <th class="py-3 px-4 text-center">Total Qty</th>
+                <th class="py-3 px-4 text-center">Available</th>
+                <th class="py-3 px-4 text-center">In Use</th>
+                <th class="py-3 px-4 text-center">Status / Holder</th>
+                <th class="py-3 px-4 text-center">Issue / Receive Action</th>
+              </tr>
+            </thead>
+            <tbody id="tools-tbody" class="divide-y divide-slate-700/50">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tool & Toolbox Issue / Receive Monitoring Log -->
+      <div class="bg-slate-800/80 border border-slate-700/70 rounded-xl overflow-hidden shadow-lg">
+        <div class="p-4 border-b border-slate-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 class="font-bold text-white text-sm flex items-center gap-2">
+              <i class="fa-solid fa-clipboard-check text-cyan-400"></i> Tool & Toolbox Issue / Receive Monitoring Log
+            </h3>
+            <p class="text-xs text-slate-400">Complete audit trail of Common Tools (tool-wise) and Toolboxes (toolbox-wise) issued to and received from technicians</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="tool-loan-history-filter" onchange="renderTools()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+              <option value="ALL">All Handovers (Issued & Received)</option>
+              <option value="Active">Currently Issued (Out)</option>
+              <option value="Returned">Received Back (Returned)</option>
+            </select>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm text-slate-300">
+            <thead class="text-xs uppercase bg-slate-900/80 text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-4">Issue Date & Time</th>
+                <th class="py-3 px-4">Mode</th>
+                <th class="py-3 px-4">Tool / Toolbox Issued</th>
+                <th class="py-3 px-4">Issued To Technician</th>
+                <th class="py-3 px-4">Target Machine</th>
+                <th class="py-3 px-4 text-center">Qty / Items</th>
+                <th class="py-3 px-4">Receive Date & Status</th>
+                <th class="py-3 px-4">Return Condition / Remarks</th>
+                <th class="py-3 px-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="tool-history-tbody" class="divide-y divide-slate-700/50">
               <!-- Populated via JS -->
             </tbody>
           </table>
@@ -376,8 +572,10 @@
           <!-- Type Filter -->
           <select id="log-type-filter" onchange="renderLogs()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
             <option value="ALL">All Types</option>
-            <option value="ISSUE">Issue (Stock Out)</option>
-            <option value="RECEIVE">Receive (Stock In)</option>
+            <option value="ISSUE">Spare Part Issue (Stock Out)</option>
+            <option value="RECEIVE">Spare Part Receive (Stock In)</option>
+            <option value="TOOL-CHECKOUT">Tool / Toolbox Issue</option>
+            <option value="TOOL-RETURN">Tool / Toolbox Receive</option>
           </select>
           <!-- Machine Filter -->
           <select id="log-machine-filter" onchange="renderLogs()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
@@ -912,27 +1110,27 @@
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
       <div class="flex items-center justify-between border-b border-slate-700 pb-3">
         <h3 class="font-bold text-slate-100 flex items-center gap-2">
-          <i class="fa-solid fa-user-gear text-cyan-400"></i> Add New Technician
+          <i class="fa-solid fa-user-gear text-cyan-400"></i> Register Technician
         </h3>
         <button onclick="closeModal('addTechModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
 
       <form id="addTechForm" onsubmit="handleAddTechSubmit(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Technician Code / EPF *</label>
-          <input type="text" id="tech-code" required placeholder="e.g. TECH-08" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Employee / Tech ID *</label>
+          <input type="text" id="tech-code" required placeholder="e.g. TECH-006" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Full Name *</label>
-          <input type="text" id="tech-name" required placeholder="e.g. Hasitha Gunawardhana" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          <input type="text" id="tech-name" required placeholder="e.g. Kasun Rajapaksha" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Designation / Role *</label>
-          <input type="text" id="tech-role" required placeholder="e.g. Mechanical Specialist, Electrician" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Designation / Specialty *</label>
+          <input type="text" id="tech-role" required placeholder="e.g. Senior Electrical Technician" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Department</label>
-          <input type="text" id="tech-dept" placeholder="e.g. Maintenance Department" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Assigned Department *</label>
+          <input type="text" id="tech-dept" required placeholder="e.g. Electrical Maintenance" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
         </div>
 
         <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
@@ -940,6 +1138,331 @@
           <button type="submit" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg text-sm shadow">Save Technician</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: TOOL CHECKOUT (ISSUE COMMON TOOL OR COMPLETE TOOLBOX TO TECH) -->
+  <div id="toolCheckoutModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-amber-500/20 text-amber-400 p-2 rounded-lg">
+            <i class="fa-solid fa-wrench text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100" id="tool-checkout-modal-title">Issue Tool / Toolbox to Technician</h3>
+            <p class="text-xs text-slate-400">Common tools issue tool-wise | Toolboxes 1–5 issue toolbox-wise</p>
+          </div>
+        </div>
+        <button onclick="closeModal('toolCheckoutModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Mode Switcher: Common Tool (Tool-Wise) vs Toolbox (Toolbox-Wise) -->
+      <div class="grid grid-cols-2 gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-700">
+        <button type="button" id="btn-mode-common-tool" onclick="setToolCheckoutMode('TOOL')" class="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all bg-amber-600 text-white shadow">
+          <i class="fa-solid fa-wrench"></i> Common Tool (Tool-Wise)
+        </button>
+        <button type="button" id="btn-mode-toolbox" onclick="setToolCheckoutMode('TOOLBOX')" class="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all text-slate-400 hover:text-white">
+          <i class="fa-solid fa-toolbox"></i> Toolbox 1–5 (Toolbox-Wise)
+        </button>
+      </div>
+
+      <form id="toolCheckoutForm" onsubmit="handleToolCheckoutSubmit(event)" class="space-y-4">
+        <!-- SECTION A: COMMON TOOL (TOOL-WISE) SELECTION -->
+        <div id="checkout-common-tool-section" class="space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Select Common Tool (Tool-Wise) *</label>
+            <input type="text" id="tool-checkout-search" oninput="filterCheckoutTools()" placeholder="Search Common Tool by name or specification (e.g. Pipe Wrench, 17mm)..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 mb-1.5">
+            <select id="checkout-tool-id" onchange="updateCheckoutToolInfo()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+              <!-- Populated via JS with Common Tools only -->
+            </select>
+            <div id="checkout-tool-info" class="text-xs text-slate-400 mt-1.5 flex justify-between bg-slate-900/60 p-2 rounded border border-slate-700/60">
+              <span>Category: <strong id="checkout-tool-box" class="text-cyan-400">Common Tools</strong></span>
+              <span>Available Qty: <strong id="checkout-tool-avail" class="text-emerald-400">0</strong></span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Quantity to Issue *</label>
+            <input type="number" id="checkout-qty" min="1" value="1" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <!-- SECTION B: COMPLETE TOOLBOX (TOOLBOX-WISE) SELECTION -->
+        <div id="checkout-toolbox-section" class="hidden space-y-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Select Complete Toolbox (Toolbox-Wise) *</label>
+            <select id="checkout-toolbox-select" onchange="updateCheckoutToolboxPreview()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+              <option value="Toolbox 1">Toolbox 1</option>
+              <option value="Toolbox 2">Toolbox 2</option>
+              <option value="Toolbox 3">Toolbox 3</option>
+              <option value="Toolbox 4">Toolbox 4</option>
+              <option value="Toolbox 5">Toolbox 5</option>
+            </select>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-700/80 rounded-xl p-3 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-semibold text-indigo-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-list-check"></i> Toolbox Contents Summary:
+              </span>
+              <span id="checkout-toolbox-count-badge" class="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-mono text-[11px]">0 tools</span>
+            </div>
+            <div id="checkout-toolbox-items-preview" class="max-h-28 overflow-y-auto text-[11px] text-slate-300 space-y-1 pr-1 divide-y divide-slate-800">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Issue To Technician *</label>
+            <select id="checkout-tech-id" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Target Machine / Bay *</label>
+            <select id="checkout-machine-id" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Expected Return Date</label>
+            <input type="date" id="checkout-return-date" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Purpose / Job Remarks</label>
+            <input type="text" id="checkout-notes" placeholder="e.g. Shift A breakdown maintenance" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('toolCheckoutModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" id="btn-submit-tool-checkout" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-semibold rounded-lg text-sm shadow">Confirm Issue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: TOOL / TOOLBOX RECEIVE (CHECK IN) -->
+  <div id="toolReturnModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-emerald-500/20 text-emerald-400 p-2 rounded-lg">
+            <i class="fa-solid fa-rotate-left text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100">Receive Tool / Toolbox Back</h3>
+            <p class="text-xs text-slate-400">Verify return from technician & restore availability</p>
+          </div>
+        </div>
+        <button onclick="closeModal('toolReturnModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="toolReturnForm" onsubmit="handleToolReturnSubmit(event)" class="space-y-4">
+        <input type="hidden" id="return-loan-id">
+
+        <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/60 space-y-1.5 text-xs text-slate-300">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Tool:</span>
+            <span class="font-bold text-white" id="return-tool-name">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Location:</span>
+            <span class="text-cyan-300 font-mono" id="return-tool-box">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Checked Out By:</span>
+            <span class="text-amber-300 font-semibold" id="return-tech-name">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Machine Used On:</span>
+            <span class="text-slate-200" id="return-machine-name">-</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Loan Qty:</span>
+            <span class="font-bold text-emerald-400" id="return-loan-qty">1</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Tool Condition on Return *</label>
+          <select id="return-condition" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+            <option value="Good / Operational">Good / Operational</option>
+            <option value="Needs Cleaning / Sharpening">Needs Cleaning / Sharpening</option>
+            <option value="Damaged / Broken">Damaged / Broken</option>
+            <option value="Missing Item">Missing Item</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Return Remarks</label>
+          <input type="text" id="return-notes" placeholder="e.g. Returned clean in original compartment" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('toolReturnModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-sm shadow">Confirm Return</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD NEW TOOL -->
+  <div id="addToolModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <h3 class="font-bold text-slate-100 flex items-center gap-2">
+          <i class="fa-solid fa-wrench text-cyan-400"></i> Register New Tool
+        </h3>
+        <button onclick="closeModal('addToolModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="addToolForm" onsubmit="handleAddToolSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Tool Name *</label>
+          <input type="text" id="add-tool-name" required placeholder="e.g. Pipe Wrench, Allenkey set" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Specification / Size *</label>
+          <input type="text" id="add-tool-spec" required placeholder="e.g. 17mm, 18 inch, Complete set" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Toolbox / Location *</label>
+            <select id="add-tool-location" onchange="toggleCustomToolboxInput(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+              <option value="Common Tools">Common Tools</option>
+              <option value="Toolbox 1">Toolbox 1</option>
+              <option value="Toolbox 2">Toolbox 2</option>
+              <option value="Toolbox 3">Toolbox 3</option>
+              <option value="Toolbox 4">Toolbox 4</option>
+              <option value="Toolbox 5">Toolbox 5</option>
+              <option value="__NEW__">+ Create New Toolbox / Set...</option>
+            </select>
+            <input type="text" id="add-tool-custom-box" placeholder="Enter new Toolbox name (e.g. Toolbox 6)" class="hidden mt-2 w-full bg-slate-900 border border-cyan-500 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Total Quantity *</label>
+            <input type="number" id="add-tool-qty" min="0" value="1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('addToolModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg text-sm shadow">Save Tool</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: EXCEL UPLOAD FOR NEW TOOLS SET OR TOOLBOX -->
+  <div id="excelToolUploadModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-3xl w-full p-6 shadow-2xl relative space-y-4 max-h-[92vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-xl border border-emerald-500/30">
+            <i class="fa-solid fa-file-excel text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100 text-lg">Upload Excel for Tools Set or Toolbox</h3>
+            <p class="text-xs text-slate-400">Import a new Toolbox (e.g. Toolbox 6), Common Tools list, or multi-sheet workbook</p>
+          </div>
+        </div>
+        <button onclick="closeModal('excelToolUploadModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <!-- Target Toolbox / Tool Set Selection -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-900/70 border border-slate-700 rounded-xl p-3.5">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Target Toolbox / Tool Set</label>
+          <select id="excel-tool-target-box" onchange="handleExcelToolBoxTargetChange(this.value)" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500">
+            <option value="AUTO">Auto-Detect from Sheet / Title / Column</option>
+            <option value="NEW">+ New Toolbox / Tool Set (Enter Name)</option>
+            <option value="Common Tools">Common Tools (Tool-Wise)</option>
+            <option value="Toolbox 1">Toolbox 1 (Toolbox-Wise)</option>
+            <option value="Toolbox 2">Toolbox 2 (Toolbox-Wise)</option>
+            <option value="Toolbox 3">Toolbox 3 (Toolbox-Wise)</option>
+            <option value="Toolbox 4">Toolbox 4 (Toolbox-Wise)</option>
+            <option value="Toolbox 5">Toolbox 5 (Toolbox-Wise)</option>
+          </select>
+        </div>
+        <div id="excel-new-toolbox-name-wrap" class="hidden">
+          <label class="block text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-1">New Toolbox / Set Name *</label>
+          <input type="text" id="excel-new-toolbox-name" oninput="reapplyExcelToolboxOverride()" placeholder="e.g. Toolbox 6 or Electrical Toolbox" class="w-full bg-slate-800 border border-emerald-500 rounded-lg px-3 py-2 text-xs sm:text-sm text-white focus:outline-none">
+        </div>
+        <div id="excel-import-mode-wrap">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Import Mode</label>
+          <select id="excel-tool-import-mode" class="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-emerald-500">
+            <option value="MERGE">Add / Update Quantities into Existing</option>
+            <option value="REPLACE_BOX">Replace Existing Tools in Target Toolbox</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Format Guide -->
+      <div class="bg-slate-900/60 border border-cyan-500/30 rounded-xl p-3 text-xs text-slate-300 space-y-1">
+        <div class="font-semibold text-cyan-400 flex items-center gap-1">
+          <i class="fa-solid fa-circle-info"></i> Supported Excel Columns Format:
+        </div>
+        <div class="font-mono text-slate-400 overflow-x-auto py-1">
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-white mr-1">Tool name</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-cyan-300 mr-1">Specification</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-emerald-300 mr-1">Quantity</span>
+          <span class="bg-slate-800 px-2 py-0.5 rounded text-amber-300">Toolbox (Optional)</span>
+        </div>
+        <p class="text-[11px] text-slate-400 italic">Supports grouped rows where "Tool name" is blank on sub-rows (automatically inherits the tool name above it) and top title headers like "Toolbox 1".</p>
+      </div>
+
+      <!-- Drag & Drop Zone -->
+      <div class="border-2 border-dashed border-slate-600 hover:border-emerald-500 rounded-xl p-5 text-center cursor-pointer bg-slate-900/40 transition-colors" onclick="document.getElementById('excelToolFileInput').click()">
+        <input type="file" id="excelToolFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelToolFileSelect(event)">
+        <i class="fa-solid fa-cloud-arrow-up text-3xl text-emerald-400 mb-1.5"></i>
+        <p class="text-sm font-semibold text-white">Click to select or drag & drop Tools / Toolbox Excel file</p>
+        <p class="text-xs text-slate-400 mt-0.5" id="excel-tool-file-name">Supports XLSX, XLS or CSV format</p>
+      </div>
+
+      <!-- Preview Table -->
+      <div id="excel-tool-preview-container" class="hidden flex-1 overflow-y-auto space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+          <span>Parsed Tools Preview (<span id="excel-tool-count" class="text-emerald-400">0</span> items)</span>
+          <span class="text-amber-400">Ready to Import</span>
+        </div>
+        <div class="border border-slate-700 rounded-xl overflow-hidden">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-900 uppercase text-slate-400 border-b border-slate-700">
+              <tr>
+                <th class="p-2">Tool Name</th>
+                <th class="p-2">Specification</th>
+                <th class="p-2">Toolbox / Set</th>
+                <th class="p-2 text-right">Quantity</th>
+              </tr>
+            </thead>
+            <tbody id="excel-tool-preview-tbody" class="divide-y divide-slate-700/50">
+              <!-- JS Populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex justify-between items-center pt-3 border-t border-slate-700">
+        <button onclick="downloadSampleToolExcel()" type="button" class="text-xs text-cyan-400 hover:underline flex items-center gap-1">
+          <i class="fa-solid fa-download"></i> Download Tools / Toolbox Excel Template
+        </button>
+
+        <div class="flex gap-2">
+          <button type="button" onclick="closeModal('excelToolUploadModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="button" id="btn-confirm-excel-tool-import" disabled onclick="confirmExcelToolImport()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-lg text-sm shadow">
+            Confirm Tools Import
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1085,12 +1608,70 @@
     </div>
   </div>
 
+  <!-- MODAL 10: FIREBASE DATABASE STATUS & SECURITY RULES HELPER -->
+  <div id="dbRulesModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-cyan-500/20 text-cyan-400 p-2.5 rounded-xl border border-cyan-500/30">
+            <i class="fa-solid fa-server text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100 text-lg">Database Connection & Rules</h3>
+            <p class="text-xs text-slate-400" id="db-modal-status-text">Project: sml-otd (Realtime Sync Active)</p>
+          </div>
+        </div>
+        <button onclick="closeModal('dbRulesModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-3 text-xs text-slate-300">
+        <p class="leading-relaxed">
+          If your Firebase project (<code class="text-cyan-300">sml-otd</code>) shows <strong>Missing or insufficient permissions</strong>, your Firebase Console security rules are currently blocking client read/write access. While locked, this dashboard automatically syncs in real-time across browser tabs locally.
+        </p>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-amber-300"><i class="fa-solid fa-bolt mr-1"></i> Option 1: Firebase Realtime Database Rules (sml-otd-default-rtdb)</span>
+          </div>
+          <pre class="bg-slate-950 p-2.5 rounded-lg text-[11px] font-mono text-emerald-400 overflow-x-auto">{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}</pre>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-cyan-300"><i class="fa-solid fa-fire mr-1"></i> Option 2: Cloud Firestore Rules</span>
+          </div>
+          <pre class="bg-slate-950 p-2.5 rounded-lg text-[11px] font-mono text-cyan-300 overflow-x-auto">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-700">
+        <button type="button" onclick="window.setupRealtimeListeners(); closeModal('dbRulesModal');" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg text-xs shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-rotate"></i> Retry Cloud Connection
+        </button>
+        <button type="button" onclick="closeModal('dbRulesModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-xs">Close</button>
+      </div>
+    </div>
+  </div>
+
 
   <!-- JAVASCRIPT APPLICATION LOGIC -->
-  <!-- Firebase SDK Module Import -->
+  <!-- Firebase SDK Module Import (Supports Realtime Database RTDB + Firestore + Local Broadcast Fallback) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getDatabase, ref, set, get, remove, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
     import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // Firebase Credentials provided for project sml-otd
@@ -1108,16 +1689,49 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    let rtdb = null;
+    try {
+      if (firebaseConfig.databaseURL) {
+        rtdb = getDatabase(app);
+      }
+    } catch (e) {
+      // RTDB optional fallback
+    }
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'sml-otd-app';
 
-    // Expose Firebase DB & Auth globally
+    // Expose Firebase DB, RTDB & Auth globally
     window.firebaseApp = app;
     window.firebaseAuth = auth;
     window.firebaseDb = db;
+    window.firebaseRtdb = rtdb;
     window.appId = appId;
+    window.dbMode = 'LOCAL'; // 'RTDB' | 'FIRESTORE' | 'LOCAL'
+    window.rtdbApi = { ref, set, get, remove, onValue };
     window.firestoreApi = { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc };
 
-    // Authenticate user before querying Firestore
+    const triggerListenersInit = () => {
+      if (typeof window.setupRealtimeListeners === 'function') {
+        window.setupRealtimeListeners();
+      } else {
+        const pollTimer = setInterval(() => {
+          if (typeof window.setupRealtimeListeners === 'function') {
+            clearInterval(pollTimer);
+            window.setupRealtimeListeners();
+          }
+        }, 50);
+        setTimeout(() => clearInterval(pollTimer), 5000);
+      }
+    };
+
+    let listenersInitialized = false;
+    onAuthStateChanged(auth, (user) => {
+      if (user && !listenersInitialized) {
+        listenersInitialized = true;
+        triggerListenersInit();
+      }
+    });
+
+    // Authenticate user (or proceed even if Anonymous Auth is disabled in Firebase Console)
     const initAuth = async () => {
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -1126,22 +1740,13 @@
           await signInAnonymously(auth);
         }
       } catch (err) {
-        console.warn("Auth initialization error, falling back to anonymous auth:", err);
-        try { await signInAnonymously(auth); } catch (e) { console.error("Anonymous auth failed:", e); }
+        // Anonymous auth might not be enabled in the user's Firebase Console; still initialize database probe
+        if (!listenersInitialized) {
+          listenersInitialized = true;
+          triggerListenersInit();
+        }
       }
     };
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        console.log("Connected to Realtime Firebase as:", user.uid);
-        const badge = document.getElementById('db-status-badge');
-        if (badge) {
-          badge.className = "bg-emerald-500/20 text-emerald-300 text-xs px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1";
-          badge.innerHTML = `<i class="fa-solid fa-wifi text-[10px]"></i> Live Realtime DB`;
-        }
-        window.setupRealtimeListeners();
-      }
-    });
 
     initAuth();
   </script>
@@ -1152,7 +1757,7 @@
 
     // --- UI NAVIGATION & TOASTS ---
     function switchTab(tabName) {
-      const tabs = ['dashboard', 'inventory', 'machines', 'technicians', 'logs', 'deleted'];
+      const tabs = ['dashboard', 'inventory', 'tools', 'machines', 'technicians', 'logs', 'deleted'];
       tabs.forEach(t => {
         const viewEl = document.getElementById(`view-${t}`);
         const btnEl = document.getElementById(`tab-${t}`);
@@ -1166,6 +1771,7 @@
         }
       });
       if (tabName === 'dashboard') updateDashboardData();
+      if (tabName === 'tools') renderTools();
     }
 
     function showToast(message, type = 'info') {
@@ -1490,8 +2096,8 @@
         if (activityChartInstance) activityChartInstance.destroy();
 
         const months = ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'];
-        const issuesByMonth = [12, 19, 15, 22, 28, transactions.filter(t => t.type === 'ISSUE').length];
-        const receivesByMonth = [15, 10, 20, 18, 25, transactions.filter(t => t.type === 'RECEIVE').length];
+        const issuesByMonth = [0, 0, 0, 0, 0, transactions.filter(t => t.type === 'ISSUE').length];
+        const receivesByMonth = [0, 0, 0, 0, 0, transactions.filter(t => t.type === 'RECEIVE').length];
 
         activityChartInstance = new Chart(activityCtx, {
           type: 'line',
@@ -1775,22 +2381,30 @@
 
       const sorted = [...filtered].sort((a,b) => new Date(b.date + ' ' + (b.time||'00:00')) - new Date(a.date + ' ' + (a.time||'00:00')));
 
-      tbody.innerHTML = sorted.map(t => `
+      tbody.innerHTML = sorted.map(t => {
+        let badgeStyle = 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        if (t.type === 'ISSUE') badgeStyle = 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        else if (t.type === 'TOOL-CHECKOUT') badgeStyle = 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+        else if (t.type === 'TOOL-RETURN') badgeStyle = 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30';
+
+        const isOut = t.type === 'ISSUE' || t.type === 'TOOL-CHECKOUT';
+
+        return `
         <tr class="hover:bg-slate-700/40 transition-colors border-b border-slate-700/50">
           <td class="py-3 px-4 font-mono text-xs text-slate-400 whitespace-nowrap">${t.date} <span class="text-slate-400">${t.time || ''}</span></td>
           <td class="py-3 px-4">
-            <span class="text-xs font-bold px-2 py-0.5 rounded ${t.type === 'ISSUE' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}">${t.type}</span>
+            <span class="text-xs font-bold px-2 py-0.5 rounded ${badgeStyle}">${t.type}</span>
           </td>
           <td class="py-3 px-4 font-mono text-xs text-cyan-400 font-medium">${t.workOrder}</td>
           <td class="py-3 px-4 font-semibold text-white">${t.partName} <span class="text-xs font-mono text-slate-400">(${t.sku})</span></td>
           <td class="py-3 px-4 text-xs"><span class="text-cyan-300 font-mono">${t.cupboard || '-'}</span> / <span class="text-indigo-300 font-mono">${t.rack || '-'}</span></td>
           <td class="py-3 px-4 text-xs text-slate-300">${t.machineName}</td>
-          <td class="py-3 px-4 text-xs text-slate-300">${t.techName}</td>
-          <td class="py-3 px-4 text-right font-bold text-sm ${t.type === 'ISSUE' ? 'text-amber-400' : 'text-emerald-400'}">${t.type === 'ISSUE' ? '-' : '+'}${t.qty}</td>
-          <td class="py-3 px-4 text-right font-mono text-emerald-400 font-semibold">Rs. ${t.totalCost.toFixed(2)}</td>
+          <td class="py-3 px-4 text-xs text-slate-300 font-semibold">${t.techName}</td>
+          <td class="py-3 px-4 text-right font-bold text-sm ${isOut ? 'text-amber-400' : 'text-emerald-400'}">${isOut ? '-' : '+'}${t.qty}</td>
+          <td class="py-3 px-4 text-right font-mono text-emerald-400 font-semibold">Rs. ${(t.totalCost || 0).toFixed(2)}</td>
           <td class="py-3 px-4 text-xs text-slate-400 max-w-xs truncate" title="${t.purpose || ''} - ${t.notes || ''}">${t.purpose || '-'} ${t.notes ? `(${t.notes})` : ''}</td>
         </tr>
-      `).join('');
+      `}).join('');
     }
 
     // 5. Render Deleted Logs Table
@@ -1821,47 +2435,169 @@
       `).join('');
     }
 
-    // --- INITIAL SEED DATA WITH CUPBOARD & RACK ---
-    const DEFAULT_INVENTORY = [
-      { id: 'P01', sku: 'SKU-1001', name: 'Heavy Duty V-Belt B-68', category: 'Drive & Belts', qty: 24, minQty: 10, unitCost: 18.50, cupboard: 'Cupboard 01', rack: 'Rack A-02' },
-      { id: 'P02', sku: 'SKU-1002', name: 'Ball Bearing 6204-2RS', category: 'Bearings', qty: 42, minQty: 15, unitCost: 8.75, cupboard: 'Cupboard 02', rack: 'Rack B-12' },
-      { id: 'P03', sku: 'SKU-1003', name: 'Solenoid Valve 24V DC 1/4"', category: 'Pneumatics', qty: 4, minQty: 8, unitCost: 42.00, cupboard: 'Cupboard 01', rack: 'Rack C-04' },
-      { id: 'P04', sku: 'SKU-1004', name: 'Temperature Sensor PT100', category: 'Electrical', qty: 12, minQty: 5, unitCost: 35.00, cupboard: 'Cupboard 03', rack: 'Rack E-01' },
-      { id: 'P05', sku: 'SKU-1005', name: 'High Temp Mechanical Seal 25mm', category: 'Seals & Gaskets', qty: 3, minQty: 6, unitCost: 95.00, cupboard: 'Cupboard 02', rack: 'Rack B-05' },
-      { id: 'P06', sku: 'SKU-1006', name: 'Hydraulic Oil ISO VG 46 (20L Drum)', category: 'Lubricants', qty: 18, minQty: 5, unitCost: 78.00, cupboard: 'Main Store Bay', rack: 'Rack D-01' },
-      { id: 'P07', sku: 'SKU-1007', name: 'Ceramic Thread Guide Assembly', category: 'Spare Wear Parts', qty: 30, minQty: 10, unitCost: 12.40, cupboard: 'Cupboard 04', rack: 'Rack A-15' },
-      { id: 'P08', sku: 'SKU-1008', name: 'Boiler Gasket Kit High Pressure', category: 'Seals & Gaskets', qty: 2, minQty: 5, unitCost: 110.00, cupboard: 'Cupboard 05', rack: 'Rack D-03' },
-      { id: 'P09', sku: 'SKU-1009', name: 'Kaeser Compressor Air Filter Element', category: 'Filters', qty: 8, minQty: 4, unitCost: 65.00, cupboard: 'Cupboard 03', rack: 'Rack C-02' },
-      { id: 'P10', sku: 'SKU-1010', name: 'Thermal Overload Relay 12A Schneider', category: 'Electrical', qty: 15, minQty: 5, unitCost: 28.00, cupboard: 'Cupboard 03', rack: 'Rack E-09' },
-      { id: 'P11', sku: 'SKU-1011', name: 'Pneumatic Cylinder 32mm x 100mm', category: 'Pneumatics', qty: 5, minQty: 6, unitCost: 84.00, cupboard: 'Cupboard 01', rack: 'Rack C-05' }
+    // --- INITIAL SEED DATA (All sample inventory, machines, technicians & logs cleared; only Given Tools retained) ---
+    const SAMPLE_IDS_TO_PURGE = {
+      inventory: ['P01','P02','P03','P04','P05','P06','P07','P08','P09','P10','P11'],
+      machines: ['MCH-001','MCH-002','MCH-003','MCH-004','MCH-005','MCH-006'],
+      technicians: ['TECH-001','TECH-002','TECH-003','TECH-004','TECH-005'],
+      transactions: ['TX-1001','TX-1002','TX-1003','TX-1004']
+    };
+
+    const DEFAULT_INVENTORY = [];
+
+    // --- INITIAL SEED TOOLS DATA (Common Tools & Toolboxes 1-5 from User Images) ---
+    const DEFAULT_TOOLS = [
+      // Common Tools
+      { id: 'TL-CT-01', name: 'Revet gun', specification: 'lazy tong', toolbox: 'Common Tools', totalQty: 2, availableQty: 2, inUseQty: 0 },
+      { id: 'TL-CT-02', name: 'Revet gun', specification: 'hand rivet gun', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-03', name: 'Spanner', specification: '450-55', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-04', name: 'Spanner', specification: '375-15', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-05', name: 'Spanner', specification: '18 inch', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-06', name: 'Pipe Wrench', specification: '24"', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-07', name: 'Pipe Wrench', specification: '36"', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-08', name: 'Pipe Wrench', specification: '18"', toolbox: 'Common Tools', totalQty: 2, availableQty: 2, inUseQty: 0 },
+      { id: 'TL-CT-09', name: 'Tin snips', specification: 'Standard', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-10', name: 'Hand saw', specification: 'Standard', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-11', name: 'Bolt cutter', specification: 'Standard', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-12', name: 'Claw hammer', specification: 'Standard', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-13', name: 'Sledge hammer', specification: 'Standard', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-14', name: 'Ball peen hammer', specification: 'Standard', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      // Open and Close Wrench (yathuru kole)
+      { id: 'TL-CT-15', name: 'Open and Close Wrench (yathuru kole)', specification: '6', toolbox: 'Common Tools', totalQty: 0, availableQty: 0, inUseQty: 0 },
+      { id: 'TL-CT-16', name: 'Open and Close Wrench (yathuru kole)', specification: '7', toolbox: 'Common Tools', totalQty: 0, availableQty: 0, inUseQty: 0 },
+      { id: 'TL-CT-17', name: 'Open and Close Wrench (yathuru kole)', specification: '8', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-18', name: 'Open and Close Wrench (yathuru kole)', specification: '9', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-19', name: 'Open and Close Wrench (yathuru kole)', specification: '10', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-20', name: 'Open and Close Wrench (yathuru kole)', specification: '11', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-21', name: 'Open and Close Wrench (yathuru kole)', specification: '12', toolbox: 'Common Tools', totalQty: 0, availableQty: 0, inUseQty: 0 },
+      { id: 'TL-CT-22', name: 'Open and Close Wrench (yathuru kole)', specification: '13', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-23', name: 'Open and Close Wrench (yathuru kole)', specification: '14', toolbox: 'Common Tools', totalQty: 0, availableQty: 0, inUseQty: 0 },
+      { id: 'TL-CT-24', name: 'Open and Close Wrench (yathuru kole)', specification: '15', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-25', name: 'Open and Close Wrench (yathuru kole)', specification: '16', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-26', name: 'Open and Close Wrench (yathuru kole)', specification: '17', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-27', name: 'Open and Close Wrench (yathuru kole)', specification: '18', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-28', name: 'Open and Close Wrench (yathuru kole)', specification: '19', toolbox: 'Common Tools', totalQty: 0, availableQty: 0, inUseQty: 0 },
+      { id: 'TL-CT-29', name: 'Open and Close Wrench (yathuru kole)', specification: '20', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-30', name: 'Open and Close Wrench (yathuru kole)', specification: '21', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-31', name: 'Open and Close Wrench (yathuru kole)', specification: '22', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-32', name: 'Open and Close Wrench (yathuru kole)', specification: '23', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-33', name: 'Open and Close Wrench (yathuru kole)', specification: '24', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-34', name: 'Open and Close Wrench (yathuru kole)', specification: '25', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-35', name: 'Open and Close Wrench (yathuru kole)', specification: '26', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-36', name: 'Open and Close Wrench (yathuru kole)', specification: '27', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-37', name: 'Open and Close Wrench (yathuru kole)', specification: '28', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-38', name: 'Open and Close Wrench (yathuru kole)', specification: '29', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-39', name: 'Open and Close Wrench (yathuru kole)', specification: '30', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-40', name: 'Open and Close Wrench (yathuru kole)', specification: '31', toolbox: 'Common Tools', totalQty: 0, availableQty: 0, inUseQty: 0 },
+      { id: 'TL-CT-41', name: 'Open and Close Wrench (yathuru kole)', specification: '32', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      // Allenkey set (allenkey box)
+      { id: 'TL-CT-42', name: 'Allenkey set (allenkey box)', specification: 'V911', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-43', name: 'Allenkey set (allenkey box)', specification: '14mm', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-44', name: 'Allenkey set (allenkey box)', specification: '17mm', toolbox: 'Common Tools', totalQty: 3, availableQty: 3, inUseQty: 0 },
+      { id: 'TL-CT-45', name: 'Allenkey set (allenkey box)', specification: '15mm', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-46', name: 'Allenkey set (allenkey box)', specification: '10mm', toolbox: 'Common Tools', totalQty: 10, availableQty: 10, inUseQty: 0 },
+      { id: 'TL-CT-47', name: 'Allenkey set (allenkey box)', specification: '19mm', toolbox: 'Common Tools', totalQty: 2, availableQty: 2, inUseQty: 0 },
+      { id: 'TL-CT-48', name: 'Allenkey set (allenkey box)', specification: '12mm', toolbox: 'Common Tools', totalQty: 2, availableQty: 2, inUseQty: 0 },
+      { id: 'TL-CT-49', name: 'Allenkey set (allenkey box)', specification: '8mm', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-50', name: 'Allenkey set (allenkey box)', specification: '6mm', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-51', name: 'Allenkey set (allenkey box)', specification: '4mm', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-CT-52', name: 'Allenkey set (allenkey box)', specification: '5mm', toolbox: 'Common Tools', totalQty: 1, availableQty: 1, inUseQty: 0 },
+
+      // Toolbox 1
+      { id: 'TL-TB1-01', name: 'Double side open wrench', specification: '36-34', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-02', name: 'Double side open wrench', specification: '30-32', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-03', name: 'Double side open wrench', specification: '27-30', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-04', name: 'Double side open wrench', specification: '22-24', toolbox: 'Toolbox 1', totalQty: 2, availableQty: 2, inUseQty: 0 },
+      { id: 'TL-TB1-05', name: 'Double side open wrench', specification: '19-17', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-06', name: 'Double side open wrench', specification: '18-19', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-07', name: 'Double side open wrench', specification: '17-14', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-08', name: 'Double side open wrench', specification: '15-13', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-09', name: 'Double side open wrench', specification: '10-12', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-10', name: 'Double side open wrench', specification: '6-7', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-11', name: 'Shifter', specification: '12*300mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-12', name: 'Double combination wrench', specification: '22-24', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-13', name: 'Double combination wrench', specification: '13-15', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-14', name: 'Double combination wrench', specification: '17-19', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-15', name: 'Allenkey set', specification: '1.5mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-16', name: 'Allenkey set', specification: '2.5mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-17', name: 'Allenkey set', specification: '4mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-18', name: 'Allenkey set', specification: '5mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-19', name: 'Allenkey set', specification: '6mm', toolbox: 'Toolbox 1', totalQty: 2, availableQty: 2, inUseQty: 0 },
+      { id: 'TL-TB1-20', name: 'Allenkey set', specification: '8mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-21', name: 'Allenkey set', specification: '10mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-22', name: 'Allenkey set', specification: '12mm', toolbox: 'Toolbox 1', totalQty: 2, availableQty: 2, inUseQty: 0 },
+      { id: 'TL-TB1-23', name: 'Allenkey set', specification: '13mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-24', name: 'Allenkey set', specification: '14mm', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-25', name: 'Star allenkey set', specification: 'Complete set', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-26', name: 'Circlip plier', specification: 'Inner', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-27', name: 'Circlip plier', specification: 'Outer', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-28', name: 'Nose plier', specification: 'Standard', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-29', name: 'Screw drive', specification: 'Standard', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-30', name: 'Paper cutter', specification: 'Standard', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-31', name: 'O ring tool', specification: 'Standard', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB1-32', name: 'file', specification: 'Standard', toolbox: 'Toolbox 1', totalQty: 1, availableQty: 1, inUseQty: 0 },
+
+      // Toolbox 2
+      { id: 'TL-TB2-01', name: 'Hammer', specification: 'Ball peen hammer', toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB2-02', name: 'Hammer', specification: 'cross peen hammer', toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB2-03', name: 'Files', specification: '6" flat files', toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB2-04', name: 'Files', specification: "6' Triangle file", toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB2-05', name: 'Files', specification: '6" Half circle file', toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB2-06', name: 'Files', specification: '3" triangle file', toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB2-07', name: 'Plire', specification: 'cutter plire', toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB2-08', name: 'Plire', specification: 'Nose plire', toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB2-09', name: 'Flat screw drive', specification: 'Standard', toolbox: 'Toolbox 2', totalQty: 1, availableQty: 1, inUseQty: 0 },
+
+      // Toolbox 3
+      { id: 'TL-TB3-01', name: 'Allenkey set', specification: 'complete set (1.5 to 10)', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-02', name: 'Spanner', specification: 'Standard', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-03', name: 'Screw drive', specification: 'Philip Screw drive', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-04', name: 'Screw drive', specification: 'Flat screw drive', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-05', name: 'Open wrench', specification: '10-12', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-06', name: 'Open wrench', specification: '12-14', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-07', name: 'Combination wrinch', specification: '13mm', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-08', name: 'Small hammer', specification: 'Standard', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-09', name: 'Plier', specification: 'Nose plier', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-10', name: 'Plier', specification: 'Cutter plier', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB3-11', name: 'small file', specification: 'Standard', toolbox: 'Toolbox 3', totalQty: 1, availableQty: 1, inUseQty: 0 },
+
+      // Toolbox 4
+      { id: 'TL-TB4-01', name: 'Allenkey set', specification: 'Complete set', toolbox: 'Toolbox 4', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB4-02', name: 'Hammer', specification: '3/4 Ball peen hammer', toolbox: 'Toolbox 4', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB4-03', name: 'Cutter plire', specification: 'Standard', toolbox: 'Toolbox 4', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB4-04', name: 'Screw drive', specification: 'Flat screw', toolbox: 'Toolbox 4', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB4-05', name: 'Screw drive', specification: 'Philips screw', toolbox: 'Toolbox 4', totalQty: 1, availableQty: 1, inUseQty: 0 },
+
+      // Toolbox 5
+      { id: 'TL-TB5-01', name: 'Pipe wrench', specification: '10"', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-02', name: 'Spanner', specification: '12-300mm', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-03', name: 'Ball peen hammer', specification: 'Standard', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-04', name: 'Philips screw drive', specification: 'Standard', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-05', name: 'Close wrench', specification: '20-22', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-06', name: 'Close wrench', specification: '10-12', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-07', name: 'Close wrench', specification: '18-19', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-08', name: 'Close wrench', specification: '14-15', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-09', name: 'Open wrench', specification: '17-19', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-10', name: 'Open wrench', specification: '17-14', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-11', name: 'Open wrench', specification: '5/16-5/16', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-12', name: 'Open wrench', specification: '8-10', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-13', name: 'Open wrench', specification: '17-19', toolbox: 'Toolbox 5', totalQty: 2, availableQty: 2, inUseQty: 0 },
+      { id: 'TL-TB5-14', name: 'Open and close wrench', specification: '12', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-15', name: 'Open and close wrench', specification: '9', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-16', name: 'Open and close wrench', specification: '11', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 },
+      { id: 'TL-TB5-17', name: 'Allenkey', specification: 'Standard', toolbox: 'Toolbox 5', totalQty: 1, availableQty: 1, inUseQty: 0 }
     ];
 
-    const DEFAULT_MACHINES = [
-      { id: 'MCH-001', code: 'MCH-001', name: 'Muller NF 42 Weaving Loom', department: 'Weaving Dept', location: 'Plant 1 - Line 2' },
-      { id: 'MCH-002', code: 'MCH-002', name: 'Fongs SHD 50 Dyeing Machine', department: 'Exhaust Dyeing', location: 'Dye House Bay 3' },
-      { id: 'MCH-003', code: 'MCH-003', name: 'KAESER BSD 81 Compressor 01', department: 'Utilities', location: 'Compressor Room' },
-      { id: 'MCH-004', code: 'MCH-004', name: 'COCHRAN 2.5T Oil Boiler 01', department: 'Utilities', location: 'Boiler House' },
-      { id: 'MCH-005', code: 'MCH-005', name: 'Fadis SINCRO M 510 Winder', department: 'Yarn Dyeing', location: 'Yarn Plant' },
-      { id: 'MCH-006', code: 'MCH-006', name: 'BOGE SLF 75-3 Compressor 02', department: 'Utilities', location: 'Compressor Room' }
-    ];
+    const DEFAULT_MACHINES = [];
 
-    const DEFAULT_TECHNICIANS = [
-      { id: 'TECH-001', code: 'TECH-001', name: 'Keerthi Nawarathne', role: 'Senior Maintenance Engineer', department: 'Maintenance Dept' },
-      { id: 'TECH-002', code: 'TECH-002', name: 'Hasitha Gunawardhana', role: 'Production Engineering Executive', department: 'Production Eng.' },
-      { id: 'TECH-003', code: 'TECH-003', name: 'Anushka Maduranga', role: 'Mechanical Technician', department: 'Maintenance Dept' },
-      { id: 'TECH-004', code: 'TECH-004', name: 'Chamod Mahanama', role: 'Automation & Electrical Tech', department: 'Electrical Dept' },
-      { id: 'TECH-005', code: 'TECH-005', name: 'Asanka Perera', role: 'Utility & Boiler Operator', department: 'Utilities' }
-    ];
+    const DEFAULT_TECHNICIANS = [];
 
-    const DEFAULT_TRANSACTIONS = [
-      { id: 'TX-1001', date: '2026-11-01', time: '09:30', type: 'ISSUE', partId: 'P02', partName: 'Ball Bearing 6204-2RS', sku: 'SKU-1002', cupboard: 'Cupboard 02', rack: 'Rack B-12', qty: 4, unitCost: 8.75, totalCost: 35.00, machineId: 'MCH-001', machineName: 'Muller NF 42 Weaving Loom', techId: 'TECH-003', techName: 'Anushka Maduranga', workOrder: 'WO-2026-801', purpose: 'Breakdown Repair', notes: 'Replaced noisy main shaft bearing' },
-      { id: 'TX-1002', date: '2026-11-02', time: '11:15', type: 'ISSUE', partId: 'P09', partName: 'Kaeser Compressor Air Filter Element', sku: 'SKU-1009', cupboard: 'Cupboard 03', rack: 'Rack C-02', qty: 2, unitCost: 65.00, totalCost: 130.00, machineId: 'MCH-003', machineName: 'KAESER BSD 81 Compressor 01', techId: 'TECH-001', techName: 'Keerthi Nawarathne', workOrder: 'PM-2026-104', purpose: 'Preventive Maintenance', notes: 'Scheduled 500hr filter service' },
-      { id: 'TX-1003', date: '2026-11-03', time: '14:20', type: 'ISSUE', partId: 'P05', partName: 'High Temp Mechanical Seal 25mm', sku: 'SKU-1005', cupboard: 'Cupboard 02', rack: 'Rack B-05', qty: 2, unitCost: 95.00, totalCost: 190.00, machineId: 'MCH-002', machineName: 'Fongs SHD 50 Dyeing Machine', techId: 'TECH-002', techName: 'Hasitha Gunawardhana', workOrder: 'WO-2026-820', purpose: 'Breakdown Repair', notes: 'Dye pump gland seal failure' },
-      { id: 'TX-1004', date: '2026-11-04', time: '10:00', type: 'RECEIVE', partId: 'P01', partName: 'Heavy Duty V-Belt B-68', sku: 'SKU-1001', cupboard: 'Cupboard 01', rack: 'Rack A-02', qty: 10, unitCost: 18.50, totalCost: 185.00, machineId: '-', machineName: '-', techId: 'TECH-005', techName: 'Asanka Perera', workOrder: 'GRN-9910', purpose: 'Stock Replenishment', notes: 'Received from Belts Direct Inc' }
-    ];
+    const DEFAULT_TRANSACTIONS = [];
 
     // --- APPLICATION STATE ---
     let inventory = [];
+    let tools = [];
+    let toolLoans = [];
     let machines = [];
     let technicians = [];
     let transactions = [];
@@ -1869,6 +2605,7 @@
 
     let parsedExcelData = [];
     let parsedMachineData = [];
+    let parsedToolExcelData = [];
     let parsedBackupData = null;
     let pendingAuthCallback = null;
     let isClearingData = false;
@@ -1876,13 +2613,24 @@
     let activityChartInstance = null;
     let machineCostChartInstance = null;
 
+    // Helper to dynamically get all Toolbox names (Toolbox 1-5 + any newly uploaded toolboxes)
+    function getAllToolboxNames() {
+      const baseBoxes = ['Toolbox 1', 'Toolbox 2', 'Toolbox 3', 'Toolbox 4', 'Toolbox 5'];
+      const customBoxes = tools
+        .map(t => t.toolbox)
+        .filter(box => box && box !== 'Common Tools' && !baseBoxes.includes(box));
+      return [...baseBoxes, ...new Set(customBoxes)];
+    }
+
     // --- INITIALIZATION ---
     window.onload = function() {
       loadStateFallback();
       setDefaultDates();
       populateDropdowns();
+      populateToolDropdowns();
       updateDashboardData();
       renderInventory();
+      renderTools();
       renderMachines();
       renderTechnicians();
       renderLogs();
@@ -1891,125 +2639,358 @@
 
     function loadStateFallback() {
       const savedInv = localStorage.getItem('maint_inventory');
+      const savedTools = localStorage.getItem('maint_tools');
+      const savedLoans = localStorage.getItem('maint_tool_loans');
       const savedMch = localStorage.getItem('maint_machines');
       const savedTech = localStorage.getItem('maint_technicians');
       const savedTx = localStorage.getItem('maint_transactions');
       const savedDel = localStorage.getItem('maint_deleted');
       const isInitialized = localStorage.getItem('maint_initialized');
       const isCleared = localStorage.getItem('maint_cleared') === 'true';
+      const toolsSeededV2 = localStorage.getItem('maint_tools_seeded_v2') === 'true';
+      const samplePurgedV3 = localStorage.getItem('maint_sample_purged_v3') === 'true';
 
       if (isInitialized || isCleared) {
         inventory = savedInv ? JSON.parse(savedInv) : [];
+        tools = savedTools ? JSON.parse(savedTools) : [];
+        toolLoans = savedLoans ? JSON.parse(savedLoans) : [];
         machines = savedMch ? JSON.parse(savedMch) : [];
         technicians = savedTech ? JSON.parse(savedTech) : [];
         transactions = savedTx ? JSON.parse(savedTx) : [];
         deletedItems = savedDel ? JSON.parse(savedDel) : [];
+
+        // One-time cleanup to remove previously seeded sample data while keeping given tools
+        if (!samplePurgedV3) {
+          inventory = inventory.filter(i => !SAMPLE_IDS_TO_PURGE.inventory.includes(i.id));
+          machines = machines.filter(m => !SAMPLE_IDS_TO_PURGE.machines.includes(m.id));
+          technicians = technicians.filter(t => !SAMPLE_IDS_TO_PURGE.technicians.includes(t.id));
+          transactions = transactions.filter(tx => !SAMPLE_IDS_TO_PURGE.transactions.includes(tx.id));
+          localStorage.setItem('maint_sample_purged_v3', 'true');
+          saveState();
+        }
+
+        // Ensure given initial tools are loaded if tools list was empty from an older session
+        if (!isCleared && (!tools || tools.length === 0) && !toolsSeededV2) {
+          tools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
+          localStorage.setItem('maint_tools_seeded_v2', 'true');
+          saveState();
+        }
       } else {
-        inventory = [...DEFAULT_INVENTORY];
-        machines = [...DEFAULT_MACHINES];
-        technicians = [...DEFAULT_TECHNICIANS];
-        transactions = [...DEFAULT_TRANSACTIONS];
+        inventory = [];
+        tools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
+        toolLoans = [];
+        machines = [];
+        technicians = [];
+        transactions = [];
         deletedItems = [];
         localStorage.setItem('maint_initialized', 'true');
+        localStorage.setItem('maint_tools_seeded_v2', 'true');
+        localStorage.setItem('maint_sample_purged_v3', 'true');
         saveState();
       }
     }
 
-    // --- REALTIME FIREBASE LISTENERS ---
-    window.setupRealtimeListeners = async function() {
-      if (!window.firebaseDb || !window.firestoreApi) return;
-      const { collection, doc, setDoc, getDoc, onSnapshot } = window.firestoreApi;
-      const db = window.firebaseDb;
-      const appId = window.appId;
-
-      const getColRef = (colName) => collection(db, 'artifacts', appId, 'public', 'data', colName);
-
-      // Check system configuration / initialization status
-      try {
-        const metaDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config');
-        const metaSnap = await getDoc(metaDocRef);
-        const isClearedLocal = localStorage.getItem('maint_cleared') === 'true';
-        if (!metaSnap.exists() && !isClearedLocal) {
-          // Brand new database instance -> Seed initial default data once
-          await setDoc(metaDocRef, { initialized: true, isCleared: false, createdAt: new Date().toISOString() });
-          DEFAULT_INVENTORY.forEach(item => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'inventory', item.id), item));
-          DEFAULT_MACHINES.forEach(item => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'machines', item.id), item));
-          DEFAULT_TECHNICIANS.forEach(item => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'technicians', item.id), item));
-          DEFAULT_TRANSACTIONS.forEach(item => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'transactions', item.id), item));
+    // --- CROSS-TAB LOCAL REALTIME SYNC CHANNEL ---
+    const localSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('maintitrack_realtime_sync') : null;
+    if (localSyncChannel) {
+      localSyncChannel.onmessage = (event) => {
+        if (event.data && event.data.type === 'STATE_UPDATED') {
+          loadStateFallback();
+          refreshAllViews();
         }
-      } catch (err) {
-        console.warn("Could not check system_meta status:", err);
+      };
+    }
+
+    function updateDbStatusBadge(mode, detailText) {
+      const badge = document.getElementById('db-status-badge');
+      const modalText = document.getElementById('db-modal-status-text');
+      if (modalText && detailText) modalText.textContent = detailText;
+      if (!badge) return;
+
+      if (mode === 'RTDB') {
+        badge.className = "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5 transition-all cursor-pointer";
+        badge.innerHTML = `<i class="fa-solid fa-wifi text-[10px]"></i> Live RTDB Connected`;
+      } else if (mode === 'FIRESTORE') {
+        badge.className = "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-xs px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5 transition-all cursor-pointer";
+        badge.innerHTML = `<i class="fa-solid fa-cloud text-[10px]"></i> Live Firestore DB`;
+      } else {
+        badge.className = "bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 text-xs px-2.5 py-0.5 rounded-full border border-cyan-500/30 flex items-center gap-1.5 transition-all cursor-pointer";
+        badge.innerHTML = `<i class="fa-solid fa-bolt text-[10px]"></i> Local Live Sync (Cloud Rules Locked)`;
+      }
+    }
+
+    // --- REALTIME DATABASE & FIRESTORE LISTENERS WITH PERMISSION PROBE ---
+    window.setupRealtimeListeners = async function() {
+      const isClearedLocal = localStorage.getItem('maint_cleared') === 'true';
+
+      // 1. Try Firebase Realtime Database (RTDB: sml-otd-default-rtdb) first if configured
+      if (window.firebaseRtdb && window.rtdbApi) {
+        const { ref, get, set, onValue } = window.rtdbApi;
+        const rtdb = window.firebaseRtdb;
+        const basePath = `maintitrack`;
+
+        try {
+          const metaSnap = await get(ref(rtdb, `${basePath}/system_meta/config`));
+          window.dbMode = 'RTDB';
+          updateDbStatusBadge('RTDB', 'Connected to Firebase Realtime Database (sml-otd-default-rtdb)');
+
+          if (!metaSnap.exists() && !isClearedLocal) {
+            await set(ref(rtdb, `${basePath}/system_meta/config`), { initialized: true, isCleared: false, createdAt: new Date().toISOString() });
+            for (const item of DEFAULT_INVENTORY) await set(ref(rtdb, `${basePath}/inventory/${item.id}`), item);
+            for (const tool of DEFAULT_TOOLS) await set(ref(rtdb, `${basePath}/tools/${tool.id}`), tool);
+            for (const item of DEFAULT_MACHINES) await set(ref(rtdb, `${basePath}/machines/${item.id}`), item);
+            for (const item of DEFAULT_TECHNICIANS) await set(ref(rtdb, `${basePath}/technicians/${item.id}`), item);
+            for (const item of DEFAULT_TRANSACTIONS) await set(ref(rtdb, `${basePath}/transactions/${item.id}`), item);
+          }
+
+          const objToArray = (val) => val ? Object.values(val) : [];
+
+          // Purge legacy sample records from RTDB once
+          if (localStorage.getItem('maint_cloud_sample_purged_v3') !== 'true') {
+            localStorage.setItem('maint_cloud_sample_purged_v3', 'true');
+            for (const id of SAMPLE_IDS_TO_PURGE.inventory) deleteItemFromCloud('inventory', id);
+            for (const id of SAMPLE_IDS_TO_PURGE.machines) deleteItemFromCloud('machines', id);
+            for (const id of SAMPLE_IDS_TO_PURGE.technicians) deleteItemFromCloud('technicians', id);
+            for (const id of SAMPLE_IDS_TO_PURGE.transactions) deleteItemFromCloud('transactions', id);
+          }
+
+          onValue(ref(rtdb, `${basePath}/inventory`), (snap) => {
+            if (isClearingData) return;
+            inventory = objToArray(snap.val()).filter(i => !SAMPLE_IDS_TO_PURGE.inventory.includes(i.id));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          onValue(ref(rtdb, `${basePath}/tools`), (snap) => {
+            if (isClearingData) return;
+            const cloudTools = objToArray(snap.val());
+            if (cloudTools.length === 0 && !isClearedLocal && localStorage.getItem('maint_tools_seeded_cloud') !== 'true') {
+              localStorage.setItem('maint_tools_seeded_cloud', 'true');
+              tools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
+              tools.forEach(t => set(ref(rtdb, `${basePath}/tools/${t.id}`), t));
+            } else {
+              tools = cloudTools;
+            }
+            saveState(true);
+            renderTools();
+            populateToolDropdowns();
+          }, () => {});
+
+          onValue(ref(rtdb, `${basePath}/toolLoans`), (snap) => {
+            if (isClearingData) return;
+            toolLoans = objToArray(snap.val());
+            saveState(true);
+            renderTools();
+          }, () => {});
+
+          onValue(ref(rtdb, `${basePath}/machines`), (snap) => {
+            if (isClearingData) return;
+            machines = objToArray(snap.val()).filter(m => !SAMPLE_IDS_TO_PURGE.machines.includes(m.id));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          onValue(ref(rtdb, `${basePath}/technicians`), (snap) => {
+            if (isClearingData) return;
+            technicians = objToArray(snap.val()).filter(t => !SAMPLE_IDS_TO_PURGE.technicians.includes(t.id));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          onValue(ref(rtdb, `${basePath}/transactions`), (snap) => {
+            if (isClearingData) return;
+            transactions = objToArray(snap.val()).filter(tx => !SAMPLE_IDS_TO_PURGE.transactions.includes(tx.id));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          onValue(ref(rtdb, `${basePath}/deletedItems`), (snap) => {
+            if (isClearingData) return;
+            deletedItems = objToArray(snap.val());
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          return; // Successfully connected to RTDB
+        } catch (rtdbErr) {
+          // RTDB rules locked or unavailable; fall through to test Firestore
+        }
       }
 
-      // 1. Inventory Listener
-      onSnapshot(getColRef('inventory'), (snapshot) => {
-        if (isClearingData) return;
-        inventory = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        refreshAllViews();
-      }, (err) => console.error("Firestore Inventory Snapshot Error:", err));
+      // 2. Try Cloud Firestore next (Probe once before attaching listeners)
+      if (window.firebaseDb && window.firestoreApi) {
+        const { collection, doc, setDoc, getDoc, onSnapshot } = window.firestoreApi;
+        const db = window.firebaseDb;
+        const appId = window.appId;
+        const getColRef = (colName) => collection(db, 'artifacts', appId, 'public', 'data', colName);
 
-      // 2. Machines Listener
-      onSnapshot(getColRef('machines'), (snapshot) => {
-        if (isClearingData) return;
-        machines = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        refreshAllViews();
-      }, (err) => console.error("Firestore Machines Snapshot Error:", err));
+        try {
+          const metaDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config');
+          const metaSnap = await getDoc(metaDocRef);
 
-      // 3. Technicians Listener
-      onSnapshot(getColRef('technicians'), (snapshot) => {
-        if (isClearingData) return;
-        technicians = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        refreshAllViews();
-      }, (err) => console.error("Firestore Technicians Snapshot Error:", err));
+          window.dbMode = 'FIRESTORE';
+          updateDbStatusBadge('FIRESTORE', 'Connected to Cloud Firestore (sml-otd)');
 
-      // 4. Transactions Listener
-      onSnapshot(getColRef('transactions'), (snapshot) => {
-        if (isClearingData) return;
-        transactions = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        refreshAllViews();
-      }, (err) => console.error("Firestore Transactions Snapshot Error:", err));
+          if (!metaSnap.exists() && !isClearedLocal) {
+            await setDoc(metaDocRef, { initialized: true, isCleared: false, createdAt: new Date().toISOString() });
+            DEFAULT_TOOLS.forEach(tool => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tools', tool.id), tool));
+          }
 
-      // 5. Deleted Logs Listener
-      onSnapshot(getColRef('deletedItems'), (snapshot) => {
-        if (isClearingData) return;
-        deletedItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        refreshAllViews();
-      }, (err) => console.error("Firestore DeletedItems Snapshot Error:", err));
+          if (localStorage.getItem('maint_cloud_sample_purged_v3') !== 'true') {
+            localStorage.setItem('maint_cloud_sample_purged_v3', 'true');
+            for (const id of SAMPLE_IDS_TO_PURGE.inventory) deleteItemFromCloud('inventory', id);
+            for (const id of SAMPLE_IDS_TO_PURGE.machines) deleteItemFromCloud('machines', id);
+            for (const id of SAMPLE_IDS_TO_PURGE.technicians) deleteItemFromCloud('technicians', id);
+            for (const id of SAMPLE_IDS_TO_PURGE.transactions) deleteItemFromCloud('transactions', id);
+          }
+
+          onSnapshot(getColRef('inventory'), (snapshot) => {
+            if (isClearingData) return;
+            inventory = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(i => !SAMPLE_IDS_TO_PURGE.inventory.includes(i.id));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          onSnapshot(getColRef('tools'), (snapshot) => {
+            if (isClearingData) return;
+            const cloudTools = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (cloudTools.length === 0 && !isClearedLocal && localStorage.getItem('maint_tools_seeded_cloud') !== 'true') {
+              localStorage.setItem('maint_tools_seeded_cloud', 'true');
+              tools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
+              tools.forEach(t => setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'tools', t.id), t));
+            } else {
+              tools = cloudTools;
+            }
+            saveState(true);
+            renderTools();
+            populateToolDropdowns();
+          }, () => {});
+
+          onSnapshot(getColRef('toolLoans'), (snapshot) => {
+            if (isClearingData) return;
+            toolLoans = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            saveState(true);
+            renderTools();
+          }, () => {});
+
+          onSnapshot(getColRef('machines'), (snapshot) => {
+            if (isClearingData) return;
+            machines = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(m => !SAMPLE_IDS_TO_PURGE.machines.includes(m.id));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          onSnapshot(getColRef('technicians'), (snapshot) => {
+            if (isClearingData) return;
+            technicians = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => !SAMPLE_IDS_TO_PURGE.technicians.includes(t.id));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          onSnapshot(getColRef('transactions'), (snapshot) => {
+            if (isClearingData) return;
+            transactions = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).filter(tx => !SAMPLE_IDS_TO_PURGE.transactions.includes(tx.id));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          onSnapshot(getColRef('deletedItems'), (snapshot) => {
+            if (isClearingData) return;
+            deletedItems = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            saveState(true);
+            refreshAllViews();
+          }, () => {});
+
+          return; // Successfully connected to Firestore
+        } catch (fsErr) {
+          // Both RTDB and Firestore have locked security rules -> Use Local Live Sync
+        }
+      }
+
+      // 3. Fallback: Local Real-Time Sync (BroadcastChannel + LocalStorage)
+      window.dbMode = 'LOCAL';
+      updateDbStatusBadge('LOCAL', 'Cloud Rules Locked in Firebase Console — Running Local Real-Time Sync');
+      loadStateFallback();
+      refreshAllViews();
     };
 
     function refreshAllViews() {
       const badge = document.getElementById('deleted-count-badge');
       if (badge) badge.textContent = deletedItems.length;
       populateDropdowns();
+      populateToolDropdowns();
       updateDashboardData();
       renderInventory();
+      renderTools();
       renderMachines();
       renderTechnicians();
       renderLogs();
       renderDeletedLogs();
     }
 
-    // Helper functions to write to Cloud Firestore
+    // Helper functions to write/delete in Cloud (RTDB or Firestore) safely without unhandled errors
     async function syncItemToCloud(colName, item) {
-      if (window.firebaseDb && window.firestoreApi && window.firebaseAuth?.currentUser) {
-        const { doc, setDoc } = window.firestoreApi;
-        try {
+      try {
+        if (window.dbMode === 'RTDB' && window.firebaseRtdb && window.rtdbApi) {
+          const { ref, set } = window.rtdbApi;
+          await set(ref(window.firebaseRtdb, `maintitrack/${colName}/${item.id}`), item);
+        } else if (window.dbMode === 'FIRESTORE' && window.firebaseDb && window.firestoreApi) {
+          const { doc, setDoc } = window.firestoreApi;
           await setDoc(doc(window.firebaseDb, 'artifacts', window.appId, 'public', 'data', colName, item.id), item);
-        } catch (e) { console.error(`Error saving ${colName}:`, e); }
+        }
+      } catch (e) {
+        // Handled silently; persisted in localStorage
       }
     }
 
     async function deleteItemFromCloud(colName, itemId) {
-      if (window.firebaseDb && window.firestoreApi && window.firebaseAuth?.currentUser) {
-        const { doc, deleteDoc } = window.firestoreApi;
-        try {
+      try {
+        if (window.dbMode === 'RTDB' && window.firebaseRtdb && window.rtdbApi) {
+          const { ref, remove } = window.rtdbApi;
+          await remove(ref(window.firebaseRtdb, `maintitrack/${colName}/${itemId}`));
+        } else if (window.dbMode === 'FIRESTORE' && window.firebaseDb && window.firestoreApi) {
+          const { doc, deleteDoc } = window.firestoreApi;
           await deleteDoc(doc(window.firebaseDb, 'artifacts', window.appId, 'public', 'data', colName, itemId));
-        } catch (e) { console.error(`Error deleting ${colName}:`, e); }
+        }
+      } catch (e) {
+        // Handled silently; persisted in localStorage
       }
     }
 
-    function saveState() {
+    async function clearAllCloudCollections(metaPayload) {
+      const collectionsToClear = ['inventory', 'tools', 'toolLoans', 'machines', 'technicians', 'transactions', 'deletedItems'];
+      try {
+        if (window.dbMode === 'RTDB' && window.firebaseRtdb && window.rtdbApi) {
+          const { ref, remove, set } = window.rtdbApi;
+          if (metaPayload) {
+            await set(ref(window.firebaseRtdb, `maintitrack/system_meta/config`), metaPayload);
+          }
+          for (const colName of collectionsToClear) {
+            await remove(ref(window.firebaseRtdb, `maintitrack/${colName}`));
+          }
+        } else if (window.dbMode === 'FIRESTORE' && window.firebaseDb && window.firestoreApi) {
+          const { collection, doc, deleteDoc, getDocs, setDoc } = window.firestoreApi;
+          const db = window.firebaseDb;
+          const appId = window.appId;
+          if (metaPayload) {
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config'), metaPayload);
+          }
+          for (const colName of collectionsToClear) {
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
+            const snapshot = await getDocs(colRef);
+            const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, d.id)));
+            await Promise.all(deletePromises);
+          }
+        }
+      } catch (e) {
+        // Handled silently
+      }
+    }
+
+    function saveState(skipBroadcast = false) {
       localStorage.setItem('maint_inventory', JSON.stringify(inventory));
+      localStorage.setItem('maint_tools', JSON.stringify(tools));
+      localStorage.setItem('maint_tool_loans', JSON.stringify(toolLoans));
       localStorage.setItem('maint_machines', JSON.stringify(machines));
       localStorage.setItem('maint_technicians', JSON.stringify(technicians));
       localStorage.setItem('maint_transactions', JSON.stringify(transactions));
@@ -2017,33 +2998,22 @@
       
       const badge = document.getElementById('deleted-count-badge');
       if (badge) badge.textContent = deletedItems.length;
+
+      if (!skipBroadcast && localSyncChannel) {
+        localSyncChannel.postMessage({ type: 'STATE_UPDATED', timestamp: Date.now() });
+      }
     }
 
     function confirmResetData() {
-      requestPasswordAuth("Reset System Data", "Are you sure you want to restore initial factory sample dataset? Enter password to authorize.", async () => {
+      requestPasswordAuth("Reset System Data", "Are you sure you want to restore initial factory sample dataset (including all tools)? Enter password to authorize.", async () => {
         localStorage.removeItem('maint_cleared');
         isClearingData = true;
 
-        // Clear cloud items first
-        if (window.firebaseDb && window.firestoreApi && window.firebaseAuth?.currentUser) {
-          const { doc, collection, deleteDoc, getDocs, setDoc } = window.firestoreApi;
-          const db = window.firebaseDb;
-          const appId = window.appId;
-          
-          const collectionsToClear = ['inventory', 'machines', 'technicians', 'transactions', 'deletedItems'];
-          for (const colName of collectionsToClear) {
-            try {
-              const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
-              const snapshot = await getDocs(colRef);
-              const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, d.id)));
-              await Promise.all(deletePromises);
-            } catch(e) { console.error(`Error resetting ${colName}:`, e); }
-          }
-
-          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config'), { isCleared: false, updatedAt: new Date().toISOString() });
-        }
+        await clearAllCloudCollections({ initialized: true, isCleared: false, updatedAt: new Date().toISOString() });
 
         inventory = JSON.parse(JSON.stringify(DEFAULT_INVENTORY));
+        tools = JSON.parse(JSON.stringify(DEFAULT_TOOLS));
+        toolLoans = [];
         machines = JSON.parse(JSON.stringify(DEFAULT_MACHINES));
         technicians = JSON.parse(JSON.stringify(DEFAULT_TECHNICIANS));
         transactions = JSON.parse(JSON.stringify(DEFAULT_TRANSACTIONS));
@@ -2052,6 +3022,7 @@
         localStorage.setItem('maint_initialized', 'true');
 
         inventory.forEach(item => syncItemToCloud('inventory', item));
+        tools.forEach(t => syncItemToCloud('tools', t));
         machines.forEach(item => syncItemToCloud('machines', item));
         technicians.forEach(item => syncItemToCloud('technicians', item));
         transactions.forEach(item => syncItemToCloud('transactions', item));
@@ -2066,17 +3037,21 @@
     function confirmClearAllData() {
       requestPasswordAuth(
         "Clear All Current System Data",
-        "WARNING: This will permanently wipe all active stock items, machines, technicians, transaction history, and logs. Enter password to confirm.",
+        "WARNING: This will permanently wipe all active stock items, tools, machines, technicians, transaction history, and logs. Enter password to confirm.",
         async () => {
           isClearingData = true;
 
           inventory = [];
+          tools = [];
+          toolLoans = [];
           machines = [];
           technicians = [];
           transactions = [];
           deletedItems = [];
 
           localStorage.setItem('maint_inventory', JSON.stringify([]));
+          localStorage.setItem('maint_tools', JSON.stringify([]));
+          localStorage.setItem('maint_tool_loans', JSON.stringify([]));
           localStorage.setItem('maint_machines', JSON.stringify([]));
           localStorage.setItem('maint_technicians', JSON.stringify([]));
           localStorage.setItem('maint_transactions', JSON.stringify([]));
@@ -2086,37 +3061,21 @@
 
           refreshAllViews();
 
-          if (window.firebaseDb && window.firestoreApi) {
-            const { collection, doc, deleteDoc, getDocs, setDoc } = window.firestoreApi;
-            const db = window.firebaseDb;
-            const appId = window.appId;
-
-            try {
-              const metaDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config');
-              await setDoc(metaDocRef, { initialized: true, isCleared: true, updatedAt: new Date().toISOString() });
-
-              const collectionsToClear = ['inventory', 'machines', 'technicians', 'transactions', 'deletedItems'];
-              for (const colName of collectionsToClear) {
-                const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
-                const snapshot = await getDocs(colRef);
-                const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, d.id)));
-                await Promise.all(deletePromises);
-              }
-            } catch (e) {
-              console.error("Error clearing Firestore database:", e);
-            }
-          }
+          await clearAllCloudCollections({ initialized: true, isCleared: true, updatedAt: new Date().toISOString() });
 
           inventory = [];
+          tools = [];
+          toolLoans = [];
           machines = [];
           technicians = [];
           transactions = [];
           deletedItems = [];
 
           isClearingData = false;
+          saveState();
           refreshAllViews();
 
-          showToast("All system stock and transaction data wiped clean!", "amber");
+          showToast("All system stock, tools, and transaction data wiped clean!", "amber");
         }
       );
     }
@@ -2365,13 +3324,11 @@
           if(item.unitCost > 0) inventory[existingIndex].unitCost = item.unitCost;
           if(item.cupboard) inventory[existingIndex].cupboard = item.cupboard;
           if(item.rack) inventory[existingIndex].rack = item.rack;
+          syncItemToCloud('inventory', inventory[existingIndex]);
           updatedCount++;
 
-          syncItemToCloud('inventory', inventory[existingIndex]);
-
-          // Record stock-in transaction
           const newTx = {
-            id: `TX-${Date.now()}-${Math.floor(Math.random()*100)}`,
+            id: `TX-${Date.now()}-${Math.floor(Math.random()*1000)}`,
             date: today,
             time: new Date().toTimeString().slice(0,5),
             type: 'RECEIVE',
@@ -2386,34 +3343,33 @@
             machineId: '-',
             machineName: '-',
             techId: '-',
-            techName: 'Excel Import Batch',
-            workOrder: `EXCEL-IN-${today}`,
-            purpose: 'Batch Excel Stock In',
-            notes: 'Uploaded via spreadsheet stock-in import'
+            techName: 'Excel Batch Upload',
+            workOrder: `XLS-IN-${Math.floor(1000 + Math.random()*9000)}`,
+            purpose: 'Excel Batch Stock-In',
+            notes: `Updated via Excel Sheet (${item.cupboard} / ${item.rack})`
           };
           transactions.push(newTx);
           syncItemToCloud('transactions', newTx);
-
         } else {
-          // Register as brand new item
+          // Create new part record
+          const newId = `P${Date.now()}${Math.floor(Math.random()*100)}`;
           const newPart = {
-            id: `P${Date.now()}-${Math.floor(Math.random()*100)}`,
+            id: newId,
             sku: item.sku,
             name: item.name,
             category: item.category,
             qty: item.qty,
-            minQty: item.minQty,
-            unitCost: item.unitCost,
-            cupboard: item.cupboard,
-            rack: item.rack
+            minQty: item.minQty || 5,
+            unitCost: item.unitCost || 10.00,
+            cupboard: item.cupboard || 'Cupboard 01',
+            rack: item.rack || 'Rack A-01'
           };
           inventory.push(newPart);
           syncItemToCloud('inventory', newPart);
           newAddedCount++;
 
-          // Record transaction
           const newTx = {
-            id: `TX-${Date.now()}-${Math.floor(Math.random()*100)}`,
+            id: `TX-${Date.now()}-${Math.floor(Math.random()*1000)}`,
             date: today,
             time: new Date().toTimeString().slice(0,5),
             type: 'RECEIVE',
@@ -2422,16 +3378,16 @@
             sku: newPart.sku,
             cupboard: newPart.cupboard,
             rack: newPart.rack,
-            qty: item.qty,
+            qty: newPart.qty,
             unitCost: newPart.unitCost,
-            totalCost: item.qty * newPart.unitCost,
+            totalCost: newPart.qty * newPart.unitCost,
             machineId: '-',
             machineName: '-',
             techId: '-',
-            techName: 'Excel Import Batch',
-            workOrder: `EXCEL-IN-${today}`,
-            purpose: 'New Excel Item Registration',
-            notes: 'Uploaded via spreadsheet stock-in import'
+            techName: 'Excel Batch Upload',
+            workOrder: `XLS-NEW-${Math.floor(1000 + Math.random()*9000)}`,
+            purpose: 'Initial Excel Stock-In',
+            notes: `New SKU created via Excel (${newPart.cupboard} / ${newPart.rack})`
           };
           transactions.push(newTx);
           syncItemToCloud('transactions', newTx);
@@ -2439,33 +3395,30 @@
       });
 
       saveState();
-      closeModal('excelUploadModal');
-
-      // Reset file input state
-      document.getElementById('excelFileInput').value = '';
-      document.getElementById('excel-file-name').textContent = 'Supports XLSX, XLS or CSV format';
+      parsedExcelData = [];
+      document.getElementById('excelFileInput').value = "";
       document.getElementById('excel-preview-container').classList.add('hidden');
       document.getElementById('btn-confirm-excel-import').disabled = true;
-      parsedExcelData = [];
+      closeModal('excelUploadModal');
 
       refreshAllViews();
-      showToast(`Stock-In Complete! Updated ${updatedCount} existing items & added ${newAddedCount} new SKUs.`, "success");
+      showToast(`Excel Stock-In Complete! ${newAddedCount} new SKUs added, ${updatedCount} existing SKUs updated.`, "success");
     }
 
     function downloadSampleExcel() {
-      const sampleData = [
-        { "SKU": "SKU-2001", "Part Name": "Heavy Duty O-Ring Seal 50mm", "Category": "Seals & Gaskets", "Qty": 20, "Min Qty": 5, "Unit Cost": 4.50, "Cupboard": "Cupboard 02", "Rack": "Rack B-04" },
-        { "SKU": "SKU-2002", "Part Name": "Festo Pneumatic Fitting 8mm", "Category": "Pneumatics", "Qty": 15, "Min Qty": 10, "Unit Cost": 12.00, "Cupboard": "Cupboard 01", "Rack": "Rack C-01" },
-        { "SKU": "SKU-1001", "Part Name": "Heavy Duty V-Belt B-68", "Category": "Drive & Belts", "Qty": 10, "Min Qty": 10, "Unit Cost": 18.50, "Cupboard": "Cupboard 01", "Rack": "Rack A-02" }
+      const sampleRows = [
+        { "SKU": "SKU-2001", "Part Name": "SKF Deep Groove Bearing 6305", "Category": "Bearings", "Qty": 20, "Min Qty": 5, "Unit Cost": 14.50, "Cupboard": "Cupboard 02", "Rack": "Rack B-08" },
+        { "SKU": "SKU-2002", "Part Name": "Festo Pneumatic Fitting 8mm", "Category": "Pneumatics", "Qty": 50, "Min Qty": 15, "Unit Cost": 3.20, "Cupboard": "Cupboard 01", "Rack": "Rack C-11" },
+        { "SKU": "SKU-1001", "Part Name": "Heavy Duty V-Belt B-68", "Category": "Drive & Belts", "Qty": 12, "Min Qty": 10, "Unit Cost": 18.50, "Cupboard": "Cupboard 01", "Rack": "Rack A-02" }
       ];
-
-      const ws = XLSX.utils.json_to_sheet(sampleData);
+      const ws = XLSX.utils.json_to_sheet(sampleRows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "StockInTemplate");
+      XLSX.utils.book_append_sheet(wb, ws, "Stock_In_Template");
       XLSX.writeFile(wb, "Maintenance_Stock_In_Template.xlsx");
+      showToast("Sample Excel template downloaded!", "info");
     }
 
-    // --- EXCEL MACHINE FILE READING & UPLOAD ---
+    // --- EXCEL MACHINE IMPORT LOGIC ---
     function handleExcelMachineFileSelect(e) {
       const file = e.target.files[0];
       if(!file) return;
@@ -2482,7 +3435,7 @@
           const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
           if(json.length === 0) {
-            showToast("Selected Excel file is empty!", "error");
+            showToast("Selected Machine Excel file appears to be empty!", "error");
             return;
           }
 
@@ -2495,16 +3448,16 @@
               return "";
             };
 
-            const code = String(getVal(['Machine Code', 'Code', 'MCH Code', 'Machine Number', 'Machine No']) || `MCH-${Math.floor(100 + Math.random() * 900)}`).trim();
-            const name = String(getVal(['Machine Name', 'Model', 'Machine Brand', 'Name', 'Description']) || 'Industrial Machine').trim();
-            const department = String(getVal(['Department', 'Dept', 'Section']) || 'Maintenance Dept').trim();
-            const location = String(getVal(['Location', 'Bay', 'Plant', 'Area']) || 'Plant Floor').trim();
+            const code = String(getVal(['Machine Code', 'Code', 'Machine ID', 'ID', 'Asset Code']) || `MCH-${Math.floor(100 + Math.random() * 900)}`).trim();
+            const name = String(getVal(['Machine Name', 'Name', 'Model', 'Description', 'Machine']) || '').trim();
+            const department = String(getVal(['Department', 'Dept', 'Section', 'Line']) || 'General Plant').trim();
+            const location = String(getVal(['Location', 'Bay', 'Plant', 'Area', 'Floor']) || 'Main Factory Floor').trim();
 
             return { code, name, department, location };
-          }).filter(m => m.code && m.name);
+          }).filter(item => item.code && item.name);
 
           if(parsedMachineData.length === 0) {
-            showToast("Could not parse valid machine records! Check header formatting.", "error");
+            showToast("Could not parse valid machine records! Check column headers.", "error");
             return;
           }
 
@@ -2512,20 +3465,19 @@
           document.getElementById('excel-machine-count').textContent = parsedMachineData.length;
           document.getElementById('btn-confirm-excel-machine-import').disabled = false;
 
-          document.getElementById('excel-machine-preview-tbody').innerHTML = parsedMachineData.map(m => `
+          document.getElementById('excel-machine-preview-tbody').innerHTML = parsedMachineData.map(item => `
             <tr class="hover:bg-slate-800">
-              <td class="p-2 font-mono text-cyan-400 font-semibold">${m.code}</td>
-              <td class="p-2 font-semibold text-white">${m.name}</td>
-              <td class="p-2 text-slate-300">${m.department}</td>
-              <td class="p-2 text-indigo-300">${m.location}</td>
+              <td class="p-2 font-mono text-cyan-400 font-semibold">${item.code}</td>
+              <td class="p-2 font-semibold text-white">${item.name}</td>
+              <td class="p-2 text-slate-300">${item.department}</td>
+              <td class="p-2 text-indigo-300 font-mono">${item.location}</td>
             </tr>
           `).join('');
 
-          showToast(`Parsed ${parsedMachineData.length} machine records from file!`, "success");
-
+          showToast(`Successfully parsed ${parsedMachineData.length} machines from Excel!`, "success");
         } catch (err) {
           console.error(err);
-          showToast("Failed to parse Excel file.", "error");
+          showToast("Failed to parse Machine Excel file. Ensure format is valid.", "error");
         }
       };
 
@@ -2535,119 +3487,123 @@
     function confirmExcelMachineImport() {
       if(parsedMachineData.length === 0) return;
 
-      let newCount = 0;
-      let updateCount = 0;
+      let addedCount = 0;
+      let updatedCount = 0;
 
       parsedMachineData.forEach(item => {
-        const existingIdx = machines.findIndex(m => m.code.toLowerCase() === item.code.toLowerCase());
-
-        if(existingIdx > -1) {
-          machines[existingIdx].name = item.name;
-          machines[existingIdx].department = item.department;
-          machines[existingIdx].location = item.location;
-          syncItemToCloud('machines', machines[existingIdx]);
-          updateCount++;
+        const existingIndex = machines.findIndex(m => m.code.toLowerCase() === item.code.toLowerCase());
+        if (existingIndex > -1) {
+          machines[existingIndex].name = item.name;
+          machines[existingIndex].department = item.department;
+          machines[existingIndex].location = item.location;
+          syncItemToCloud('machines', machines[existingIndex]);
+          updatedCount++;
         } else {
-          const newMch = {
-            id: `MCH-${Date.now()}-${Math.floor(Math.random()*100)}`,
+          const newMachine = {
+            id: `MCH-${Date.now()}-${Math.floor(Math.random()*1000)}`,
             code: item.code,
             name: item.name,
             department: item.department,
             location: item.location
           };
-          machines.push(newMch);
-          syncItemToCloud('machines', newMch);
-          newCount++;
+          machines.push(newMachine);
+          syncItemToCloud('machines', newMachine);
+          addedCount++;
         }
       });
 
       saveState();
-      closeModal('excelMachineUploadModal');
-
-      // Reset file upload state
-      document.getElementById('excelMachineFileInput').value = '';
-      document.getElementById('excel-machine-file-name').textContent = 'Supports XLSX, XLS or CSV format';
+      parsedMachineData = [];
+      document.getElementById('excelMachineFileInput').value = "";
       document.getElementById('excel-machine-preview-container').classList.add('hidden');
       document.getElementById('btn-confirm-excel-machine-import').disabled = true;
-      parsedMachineData = [];
+      closeModal('excelMachineUploadModal');
 
       refreshAllViews();
-      showToast(`Machine Import Complete! Registered ${newCount} new machines & updated ${updateCount}.`, "success");
+      showToast(`Machine Import Complete! ${addedCount} added, ${updatedCount} updated.`, "success");
     }
 
     function downloadSampleMachineExcel() {
-      const sampleData = [
-        { "Machine Code": "MCH-007", "Machine Name": "Fongs Labwin 06 Dyeing Machine", "Department": "Yarn Dyeing", "Location": "Yarn Plant - Lab Area" },
-        { "Machine Code": "MCH-008", "Machine Name": "Kinwah KW807SJ400F Finishing Unit", "Department": "Exhaust Dyeing", "Location": "Finishing Line 2" },
-        { "Machine Code": "MCH-001", "Machine Name": "Muller NF 42 Weaving Loom", "Department": "Weaving Dept", "Location": "Plant 1 - Line 2" }
+      const sampleRows = [
+        { "Machine Code": "MCH-101", "Machine Name": "Picanol OmniPlus Airjet Loom", "Department": "Weaving Dept", "Location": "Plant 1 - Bay A" },
+        { "Machine Code": "MCH-102", "Machine Name": "Thies EcoSoft Dyeing Machine", "Department": "Exhaust Dyeing", "Location": "Dye House Bay 2" },
+        { "Machine Code": "MCH-103", "Machine Name": "Atlas Copco GA55 Compressor", "Department": "Utilities", "Location": "Utility Block" }
       ];
-
-      const ws = XLSX.utils.json_to_sheet(sampleData);
+      const ws = XLSX.utils.json_to_sheet(sampleRows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "MachinesTemplate");
-      XLSX.writeFile(wb, "Maintenance_Machines_Import_Template.xlsx");
+      XLSX.utils.book_append_sheet(wb, ws, "Machines_Template");
+      XLSX.writeFile(wb, "Maintenance_Machines_Template.xlsx");
+      showToast("Machine Excel template downloaded!", "info");
     }
 
-    // --- BACKUP & RESTORE SYSTEM ---
+    // --- BACKUP & RESTORE SYSTEM FUNCTIONS ---
     function exportFullBackup() {
-      const backupData = {
+      const backupPayload = {
         app: "MaintiTrack Pro",
         version: "2.0",
-        exportDate: new Date().toISOString(),
-        inventory: inventory,
-        machines: machines,
-        technicians: technicians,
-        transactions: transactions,
-        deletedItems: deletedItems
+        timestamp: new Date().toISOString(),
+        data: {
+          inventory,
+          tools,
+          toolLoans,
+          machines,
+          technicians,
+          transactions,
+          deletedItems
+        }
       };
 
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
-      const link = document.createElement('a');
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupPayload, null, 2));
+      const downloadAnchor = document.createElement('a');
       const dateStr = new Date().toISOString().split('T')[0];
-      link.setAttribute("href", dataStr);
-      link.setAttribute("download", `MaintiTrack_Backup_${dateStr}.json`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `maintitrack_backup_${dateStr}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
 
-      showToast("Full system backup JSON file generated and downloaded!", "success");
+      showToast("Full system backup file (.json) downloaded!", "success");
     }
 
-    function handleBackupFileSelect(e) {
-      const file = e.target.files[0];
-      if(!file) return;
+    function handleBackupFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-      document.getElementById('backup-file-name').textContent = `File selected: ${file.name}`;
+      document.getElementById('backup-file-name').textContent = `Selected: ${file.name}`;
       const reader = new FileReader();
 
-      reader.onload = function(evt) {
+      reader.onload = function(e) {
         try {
-          const json = JSON.parse(evt.target.result);
-          if(!json || typeof json !== 'object') {
-            showToast("Invalid JSON backup structure!", "error");
+          const parsed = JSON.parse(e.target.result);
+          const payload = parsed.data ? parsed.data : parsed;
+
+          if (!Array.isArray(payload.inventory) && !Array.isArray(payload.machines)) {
+            showToast("Invalid backup file structure!", "error");
             return;
           }
 
           parsedBackupData = {
-            inventory: Array.isArray(json.inventory) ? json.inventory : [],
-            machines: Array.isArray(json.machines) ? json.machines : [],
-            technicians: Array.isArray(json.technicians) ? json.technicians : [],
-            transactions: Array.isArray(json.transactions) ? json.transactions : [],
-            deletedItems: Array.isArray(json.deletedItems) ? json.deletedItems : []
+            inventory: Array.isArray(payload.inventory) ? payload.inventory : [],
+            tools: Array.isArray(payload.tools) ? payload.tools : [],
+            toolLoans: Array.isArray(payload.toolLoans) ? payload.toolLoans : [],
+            machines: Array.isArray(payload.machines) ? payload.machines : [],
+            technicians: Array.isArray(payload.technicians) ? payload.technicians : [],
+            transactions: Array.isArray(payload.transactions) ? payload.transactions : [],
+            deletedItems: Array.isArray(payload.deletedItems) ? payload.deletedItems : []
           };
 
           document.getElementById('backup-summary-container').classList.remove('hidden');
-          document.getElementById('backup-timestamp').textContent = json.exportDate ? `Exported: ${json.exportDate.slice(0, 10)}` : 'Backup File';
+          document.getElementById('backup-timestamp').textContent = parsed.timestamp ? `Date: ${parsed.timestamp.slice(0, 10)}` : 'Backup File';
           document.getElementById('bk-inv-count').textContent = parsedBackupData.inventory.length;
           document.getElementById('bk-mch-count').textContent = parsedBackupData.machines.length;
           document.getElementById('bk-tech-count').textContent = parsedBackupData.technicians.length;
           document.getElementById('bk-tx-count').textContent = parsedBackupData.transactions.length;
 
           document.getElementById('btn-confirm-restore').disabled = false;
-          showToast("Backup file parsed successfully! Click Restore Data to proceed.", "info");
-        } catch(err) {
-          console.error(err);
-          showToast("Failed to parse JSON backup file.", "error");
+          showToast("Backup file verified and ready to restore!", "info");
+        } catch (err) {
+          console.error("Backup parse error:", err);
+          showToast("Failed to read JSON backup file!", "error");
         }
       };
 
@@ -2655,35 +3611,19 @@
     }
 
     function confirmRestoreBackup() {
-      if(!parsedBackupData) return;
+      if (!parsedBackupData) return;
 
       requestPasswordAuth(
-        "Authorize System Database Restore",
-        "WARNING: Restoring backup will replace existing live stock, machines, and transaction records. Enter master password to authorize.",
+        "Authorize System Restore",
+        "Restoring from this backup will replace all current inventory, tools, machines, technicians, and transaction logs. Enter master password to proceed.",
         async () => {
           isClearingData = true;
 
-          // 1. Purge existing cloud collections first
-          if (window.firebaseDb && window.firestoreApi && window.firebaseAuth?.currentUser) {
-            const { doc, collection, deleteDoc, getDocs, setDoc } = window.firestoreApi;
-            const db = window.firebaseDb;
-            const appId = window.appId;
+          await clearAllCloudCollections({ initialized: true, isCleared: false, restoredAt: new Date().toISOString() });
 
-            const collectionsToClear = ['inventory', 'machines', 'technicians', 'transactions', 'deletedItems'];
-            for (const colName of collectionsToClear) {
-              try {
-                const colRef = collection(db, 'artifacts', appId, 'public', 'data', colName);
-                const snapshot = await getDocs(colRef);
-                const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', colName, d.id)));
-                await Promise.all(deletePromises);
-              } catch(e) { console.error(`Error purging ${colName}:`, e); }
-            }
-
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'system_meta', 'config'), { isCleared: false, restoredAt: new Date().toISOString() });
-          }
-
-          // 2. Load restored state into memory
           inventory = [...parsedBackupData.inventory];
+          tools = [...(parsedBackupData.tools || [])];
+          toolLoans = [...(parsedBackupData.toolLoans || [])];
           machines = [...parsedBackupData.machines];
           technicians = [...parsedBackupData.technicians];
           transactions = [...parsedBackupData.transactions];
@@ -2691,27 +3631,1133 @@
 
           localStorage.setItem('maint_initialized', 'true');
           localStorage.removeItem('maint_cleared');
+          saveState();
 
-          // 3. Upload all restored documents to Firebase Cloud Firestore
           inventory.forEach(item => syncItemToCloud('inventory', item));
+          tools.forEach(t => syncItemToCloud('tools', t));
+          toolLoans.forEach(l => syncItemToCloud('toolLoans', l));
           machines.forEach(item => syncItemToCloud('machines', item));
           technicians.forEach(item => syncItemToCloud('technicians', item));
           transactions.forEach(item => syncItemToCloud('transactions', item));
           deletedItems.forEach(item => syncItemToCloud('deletedItems', item));
 
           isClearingData = false;
-          saveState();
-          closeModal('backupRestoreModal');
-
-          // Reset modal inputs
-          document.getElementById('jsonBackupInput').value = '';
-          document.getElementById('backup-file-name').textContent = 'Supports .json backup format';
-          document.getElementById('backup-summary-container').classList.add('hidden');
-          document.getElementById('btn-confirm-restore').disabled = true;
           parsedBackupData = null;
 
+          document.getElementById('jsonBackupInput').value = "";
+          document.getElementById('backup-summary-container').classList.add('hidden');
+          document.getElementById('btn-confirm-restore').disabled = true;
+          closeModal('backupRestoreModal');
+
           refreshAllViews();
-          showToast("System database successfully restored from backup!", "success");
+          showToast("System data restored from backup and synced to live database!", "success");
+        }
+      );
+    }
+
+    // --- TOOLS MONITORING LOGIC (COMMON TOOLS TOOL-WISE & TOOLBOX 1-5 TOOLBOX-WISE) ---
+    let currentToolCheckoutMode = 'TOOL'; // 'TOOL' (Common Tools) or 'TOOLBOX' (Toolboxes)
+
+    function renderTools() {
+      const search = document.getElementById('tool-search')?.value.toLowerCase().trim() || '';
+      const locFilter = document.getElementById('tool-location-filter')?.value || 'ALL';
+      const statusFilter = document.getElementById('tool-status-filter')?.value || 'ALL';
+
+      const allBoxNames = getAllToolboxNames();
+
+      // 1. Metric Counts
+      const totalTools = tools.length;
+      const commonToolsCount = tools.filter(t => t.toolbox === 'Common Tools').length;
+      const boxesCount = tools.filter(t => t.toolbox !== 'Common Tools').length;
+      const activeLoans = toolLoans.filter(l => l.status === 'Active');
+      const inUseCount = tools.reduce((sum, t) => sum + (t.inUseQty || 0), 0);
+
+      const totalEl = document.getElementById('tools-total-count');
+      const commEl = document.getElementById('tools-common-count');
+      const boxEl = document.getElementById('tools-boxes-count');
+      const boxLabelEl = document.getElementById('tools-boxes-label');
+      const inUseEl = document.getElementById('tools-in-use-count');
+      const badgeEl = document.getElementById('active-loans-badge');
+
+      if (totalEl) totalEl.textContent = totalTools;
+      if (commEl) commEl.textContent = commonToolsCount;
+      if (boxEl) boxEl.textContent = boxesCount;
+      if (boxLabelEl) boxLabelEl.textContent = `Toolboxes (${allBoxNames.length})`;
+      if (inUseEl) inUseEl.textContent = inUseCount;
+      if (badgeEl) badgeEl.textContent = `${activeLoans.length} Active Issue${activeLoans.length === 1 ? '' : 's'}`;
+
+      // 1.5 Render Toolbox Status Grid (Toolbox-Wise Monitoring for all Toolboxes)
+      const toolboxGrid = document.getElementById('toolboxes-status-grid');
+      if (toolboxGrid) {
+        toolboxGrid.innerHTML = allBoxNames.map(boxName => {
+          const boxTools = tools.filter(t => t.toolbox === boxName);
+          const totalPhysicalQty = boxTools.reduce((s, t) => s + (t.totalQty || 0), 0);
+          const activeBoxLoan = activeLoans.find(l => l.loanType === 'TOOLBOX' && l.toolbox === boxName);
+          const isIssued = Boolean(activeBoxLoan) || (boxTools.length > 0 && boxTools.every(t => t.availableQty === 0));
+
+          if (isIssued && activeBoxLoan) {
+            return `
+              <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 shadow">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-white text-xs sm:text-sm flex items-center gap-1.5">
+                      <i class="fa-solid fa-toolbox text-amber-400"></i> ${boxName}
+                    </span>
+                    <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold uppercase">Issued</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-1">${boxTools.length} Tool Types (${totalPhysicalQty} pcs)</p>
+                  <div class="mt-2 bg-slate-800/90 p-2 rounded-lg border border-slate-700 text-[11px] space-y-0.5">
+                    <p class="text-slate-300">Tech: <strong class="text-amber-300">${activeBoxLoan.techName}</strong></p>
+                    <p class="text-slate-400 truncate">Machine: <span class="text-slate-200">${activeBoxLoan.machineName}</span></p>
+                    <p class="text-[10px] text-slate-400">Issued: ${activeBoxLoan.issueDate} ${activeBoxLoan.issueTime || ''}</p>
+                  </div>
+                </div>
+                <div class="flex gap-1.5 pt-1">
+                  <button onclick="promptReturnTool('${activeBoxLoan.id}')" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 shadow transition-all">
+                    <i class="fa-solid fa-rotate-left"></i> Receive Toolbox
+                  </button>
+                  <button onclick="filterByToolbox('${boxName}')" title="View Toolbox Items" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs">
+                    <i class="fa-solid fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          } else {
+            return `
+              <div class="bg-slate-900/60 border border-slate-700/80 hover:border-cyan-500/40 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 transition-all">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-white text-xs sm:text-sm flex items-center gap-1.5">
+                      <i class="fa-solid fa-toolbox text-cyan-400"></i> ${boxName}
+                    </span>
+                    <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">Available</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-1">${boxTools.length} Tool Types (${totalPhysicalQty} pcs)</p>
+                  <p class="text-[11px] text-emerald-400/90 mt-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-check"></i> Ready in Maintenance Store
+                  </p>
+                </div>
+                <div class="flex gap-1.5 pt-1">
+                  <button onclick="quickToolboxCheckoutModal('${boxName}')" ${boxTools.length === 0 ? 'disabled' : ''} class="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 shadow transition-all">
+                    <i class="fa-solid fa-hand-holding-hand"></i> Issue Toolbox
+                  </button>
+                  <button onclick="filterByToolbox('${boxName}')" title="View Toolbox Items" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs">
+                    <i class="fa-solid fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }
+        }).join('');
+      }
+
+      // 2. Active Loans Banner (Pending Receive)
+      const loanBanner = document.getElementById('active-loans-banner');
+      const loanList = document.getElementById('active-loans-list');
+      const loanSummary = document.getElementById('active-loans-summary');
+
+      if (activeLoans.length > 0) {
+        if (loanBanner) loanBanner.classList.remove('hidden');
+        if (loanSummary) loanSummary.textContent = `${activeLoans.length} active issue(s) out with technicians`;
+        if (loanList) {
+          loanList.innerHTML = activeLoans.map(loan => {
+            const isBox = loan.loanType === 'TOOLBOX';
+            return `
+              <div class="bg-slate-900/90 p-3 rounded-xl border ${isBox ? 'border-indigo-500/50' : 'border-amber-500/40'} flex items-center justify-between gap-3 shadow">
+                <div class="min-w-0 space-y-0.5">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${isBox ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
+                      ${isBox ? 'TOOLBOX-WISE' : 'COMMON TOOL'}
+                    </span>
+                    <span class="text-[10px] font-mono text-slate-400">${loan.issueDate} ${loan.issueTime || ''}</span>
+                  </div>
+                  <p class="font-bold text-white truncate text-xs sm:text-sm">${loan.toolName} <span class="text-cyan-400 font-mono text-xs">(${loan.specification})</span></p>
+                  <p class="text-[11px] text-slate-300">Issued To: <strong class="text-amber-300">${loan.techName}</strong> | Machine: <span class="text-white">${loan.machineName}</span></p>
+                </div>
+                <button onclick="promptReturnTool('${loan.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all shadow flex items-center gap-1.5">
+                  <i class="fa-solid fa-rotate-left"></i> Receive
+                </button>
+              </div>
+            `;
+          }).join('');
+        }
+      } else {
+        if (loanBanner) loanBanner.classList.add('hidden');
+      }
+
+      // 3. Filter Tools Table
+      const filtered = tools.filter(t => {
+        const tName = String(t.name || '').toLowerCase();
+        const tSpec = String(t.specification || '').toLowerCase();
+        const tBox = String(t.toolbox || '').toLowerCase();
+        const matchesSearch = tName.includes(search) || 
+                              tSpec.includes(search) || 
+                              tBox.includes(search);
+        const matchesLoc = locFilter === 'ALL' || t.toolbox === locFilter;
+        let matchesStatus = true;
+        if (statusFilter === 'AVAILABLE') matchesStatus = (t.availableQty > 0);
+        else if (statusFilter === 'ISSUED') matchesStatus = ((t.inUseQty || 0) > 0);
+        else if (statusFilter === 'ZERO') matchesStatus = (t.totalQty === 0);
+
+        return matchesSearch && matchesLoc && matchesStatus;
+      });
+
+      const tbody = document.getElementById('tools-tbody');
+      if (tbody) {
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="py-8 text-center text-slate-400">No tools found matching your criteria.</td></tr>`;
+        } else {
+          tbody.innerHTML = filtered.map(t => {
+            const isCommon = t.toolbox === 'Common Tools';
+            const isOut = t.totalQty === 0;
+            const isInUse = (t.inUseQty || 0) > 0;
+
+            // Find active loan for this tool or its toolbox
+            const activeLoan = activeLoans.find(l => 
+              (l.loanType === 'TOOLBOX' && l.toolbox === t.toolbox) || 
+              (l.loanType !== 'TOOLBOX' && l.toolId === t.id)
+            );
+
+            let statusBadge = '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-semibold">Available</span>';
+            if (isOut) {
+              statusBadge = '<span class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded font-semibold">Zero Stock (0)</span>';
+            } else if (activeLoan) {
+              statusBadge = `
+                <div class="flex flex-col items-center">
+                  <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-semibold">Issued to ${activeLoan.techName}</span>
+                </div>
+              `;
+            } else if (t.availableQty === 0) {
+              statusBadge = '<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-semibold">All In Use</span>';
+            } else if (isInUse) {
+              statusBadge = '<span class="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded font-semibold">Partially Issued</span>';
+            }
+
+            // Color coding by toolbox
+            let locColor = 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
+            if (t.toolbox === 'Toolbox 1') locColor = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+            else if (t.toolbox === 'Toolbox 2') locColor = 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30';
+            else if (t.toolbox === 'Toolbox 3') locColor = 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
+            else if (t.toolbox === 'Toolbox 4') locColor = 'bg-purple-500/10 text-purple-300 border-purple-500/30';
+            else if (t.toolbox === 'Toolbox 5') locColor = 'bg-rose-500/10 text-rose-300 border-rose-500/30';
+
+            let actionButtonHtml = '';
+            if (isCommon) {
+              // Common tools -> Issued Tool-Wise
+              actionButtonHtml = `
+                <button onclick="quickToolCheckoutModal('${t.id}')" ${t.availableQty === 0 ? 'disabled' : ''} title="Issue Common Tool (Tool-Wise)" class="bg-amber-500/20 hover:bg-amber-500/40 disabled:opacity-30 disabled:cursor-not-allowed text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded transition-all text-xs flex items-center gap-1">
+                  <i class="fa-solid fa-wrench"></i> Issue Tool
+                </button>
+              `;
+              if (activeLoan) {
+                actionButtonHtml += `
+                  <button onclick="promptReturnTool('${activeLoan.id}')" title="Receive Tool Back" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded transition-all text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i> Receive
+                  </button>
+                `;
+              }
+            } else {
+              // Toolbox 1-5 tools -> Issued Toolbox-Wise
+              if (activeLoan) {
+                actionButtonHtml = `
+                  <button onclick="promptReturnTool('${activeLoan.id}')" title="Receive ${t.toolbox} back from technician" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded transition-all text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i> Receive ${t.toolbox}
+                  </button>
+                `;
+              } else {
+                actionButtonHtml = `
+                  <button onclick="quickToolboxCheckoutModal('${t.toolbox}')" title="Issue entire ${t.toolbox} (Toolbox-Wise)" class="bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded transition-all text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-toolbox"></i> Issue ${t.toolbox}
+                  </button>
+                `;
+              }
+            }
+
+            return `
+              <tr class="hover:bg-slate-700/40 transition-colors border-b border-slate-700/50">
+                <td class="py-3 px-4 font-semibold text-white text-xs sm:text-sm">
+                  <i class="fa-solid ${isCommon ? 'fa-wrench text-amber-400/70' : 'fa-toolbox text-indigo-400/70'} mr-1.5 text-xs"></i>${t.name}
+                </td>
+                <td class="py-3 px-4 font-mono text-cyan-400 font-medium text-xs">${t.specification || '-'}</td>
+                <td class="py-3 px-4 text-xs">
+                  <span class="px-2 py-0.5 rounded border ${locColor} font-semibold">${t.toolbox}</span>
+                  <span class="block text-[10px] text-slate-400 mt-0.5">${isCommon ? 'Tool-Wise Issue' : 'Toolbox-Wise Issue'}</span>
+                </td>
+                <td class="py-3 px-4 text-center font-bold text-slate-200 text-xs">${t.totalQty}</td>
+                <td class="py-3 px-4 text-center font-bold text-xs ${t.availableQty > 0 ? 'text-emerald-400' : 'text-slate-500'}">${t.availableQty}</td>
+                <td class="py-3 px-4 text-center font-bold text-xs ${t.inUseQty > 0 ? 'text-amber-400' : 'text-slate-500'}">${t.inUseQty || 0}</td>
+                <td class="py-3 px-4 text-center">${statusBadge}</td>
+                <td class="py-3 px-4 text-center">
+                  <div class="flex items-center justify-center gap-1.5">
+                    ${actionButtonHtml}
+                    <button onclick="promptDeleteTool('${t.id}')" title="Delete Tool (Password Required)" class="bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 p-1.5 rounded transition-all text-xs">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+
+      // 4. Render Tool & Toolbox Issue / Receive Monitoring History Table
+      const historyTbody = document.getElementById('tool-history-tbody');
+      const historyFilter = document.getElementById('tool-loan-history-filter')?.value || 'ALL';
+      if (historyTbody) {
+        const filteredLoans = toolLoans.filter(l => historyFilter === 'ALL' || l.status === historyFilter);
+        const sortedLoans = [...filteredLoans].sort((a, b) => new Date((b.issueDate || '') + ' ' + (b.issueTime || '00:00')) - new Date((a.issueDate || '') + ' ' + (a.issueTime || '00:00')));
+
+        if (sortedLoans.length === 0) {
+          historyTbody.innerHTML = `<tr><td colspan="9" class="py-8 text-center text-slate-400">No tool or toolbox issue/receive records found.</td></tr>`;
+        } else {
+          historyTbody.innerHTML = sortedLoans.map(loan => {
+            const isBox = loan.loanType === 'TOOLBOX';
+            const isReturned = loan.status === 'Returned';
+            return `
+              <tr class="hover:bg-slate-700/40 transition-colors">
+                <td class="py-3 px-4 font-mono text-xs text-slate-300 whitespace-nowrap">${loan.issueDate} <span class="text-slate-400">${loan.issueTime || ''}</span></td>
+                <td class="py-3 px-4">
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded ${isBox ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
+                    ${isBox ? 'TOOLBOX-WISE' : 'TOOL-WISE'}
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-semibold text-white">
+                  ${loan.toolName} <span class="text-xs font-mono text-cyan-400">(${loan.specification})</span>
+                </td>
+                <td class="py-3 px-4 font-semibold text-amber-300">${loan.techName}</td>
+                <td class="py-3 px-4 text-slate-300">${loan.machineName}</td>
+                <td class="py-3 px-4 text-center font-bold text-slate-200">${isBox ? `${loan.qty} Tools` : loan.qty}</td>
+                <td class="py-3 px-4">
+                  ${isReturned 
+                    ? `<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-bold">RECEIVED (${loan.returnDate || ''})</span>`
+                    : `<span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-bold animate-pulse">ISSUED / IN USE</span>`
+                  }
+                </td>
+                <td class="py-3 px-4 text-xs text-slate-400 max-w-xs truncate" title="${loan.notes || ''}">${loan.conditionOnReturn ? `<strong class="text-emerald-300">${loan.conditionOnReturn}</strong> - ` : ''}${loan.notes || '-'}</td>
+                <td class="py-3 px-4 text-center">
+                  ${!isReturned
+                    ? `<button onclick="promptReturnTool('${loan.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded text-xs font-semibold shadow transition-all flex items-center gap-1 mx-auto">
+                        <i class="fa-solid fa-rotate-left"></i> Receive
+                      </button>`
+                    : `<span class="text-xs text-slate-500"><i class="fa-solid fa-check-double text-emerald-400"></i> Completed</span>`
+                  }
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    function filterByToolbox(boxName) {
+      const locSelect = document.getElementById('tool-location-filter');
+      if (locSelect) {
+        locSelect.value = boxName;
+        renderTools();
+      }
+    }
+
+    function setToolCheckoutMode(mode) {
+      currentToolCheckoutMode = mode;
+      const btnTool = document.getElementById('btn-mode-common-tool');
+      const btnBox = document.getElementById('btn-mode-toolbox');
+      const secTool = document.getElementById('checkout-common-tool-section');
+      const secBox = document.getElementById('checkout-toolbox-section');
+      const submitBtn = document.getElementById('btn-submit-tool-checkout');
+
+      if (mode === 'TOOLBOX') {
+        if (btnBox) btnBox.className = "py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all bg-indigo-600 text-white shadow";
+        if (btnTool) btnTool.className = "py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all text-slate-400 hover:text-white";
+        if (secBox) secBox.classList.remove('hidden');
+        if (secTool) secTool.classList.add('hidden');
+        if (submitBtn) submitBtn.textContent = "Issue Complete Toolbox";
+        updateCheckoutToolboxPreview();
+      } else {
+        if (btnTool) btnTool.className = "py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all bg-amber-600 text-white shadow";
+        if (btnBox) btnBox.className = "py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all text-slate-400 hover:text-white";
+        if (secTool) secTool.classList.remove('hidden');
+        if (secBox) secBox.classList.add('hidden');
+        if (submitBtn) submitBtn.textContent = "Issue Common Tool";
+        updateCheckoutToolInfo();
+      }
+    }
+
+    function openToolCheckoutMode(mode) {
+      populateToolDropdowns();
+      setToolCheckoutMode(mode);
+      const retDateInput = document.getElementById('checkout-return-date');
+      if (retDateInput) retDateInput.value = new Date().toISOString().split('T')[0];
+      openModal('toolCheckoutModal');
+    }
+
+    function populateToolDropdowns() {
+      const boxNames = getAllToolboxNames();
+
+      // 0. Update Location Filter & Add Tool Modal & Excel Target Box dropdowns dynamically
+      const locFilter = document.getElementById('tool-location-filter');
+      if (locFilter) {
+        const currentLoc = locFilter.value;
+        locFilter.innerHTML = `<option value="ALL">All Locations & Toolboxes</option>` +
+          `<option value="Common Tools">Common Tools (Issue Tool-Wise)</option>` +
+          boxNames.map(b => `<option value="${b}">${b} (Issue Toolbox-Wise)</option>`).join('');
+        if (currentLoc === 'ALL' || currentLoc === 'Common Tools' || boxNames.includes(currentLoc)) {
+          locFilter.value = currentLoc;
+        }
+      }
+
+      const addToolLoc = document.getElementById('add-tool-location');
+      if (addToolLoc) {
+        const currentAddLoc = addToolLoc.value;
+        addToolLoc.innerHTML = `<option value="Common Tools">Common Tools</option>` +
+          boxNames.map(b => `<option value="${b}">${b}</option>`).join('') +
+          `<option value="__NEW__">+ Create New Toolbox / Set...</option>`;
+        if (currentAddLoc && (currentAddLoc === 'Common Tools' || boxNames.includes(currentAddLoc))) {
+          addToolLoc.value = currentAddLoc;
+        }
+      }
+
+      const excelTargetBox = document.getElementById('excel-tool-target-box');
+      if (excelTargetBox) {
+        const currentTarget = excelTargetBox.value;
+        excelTargetBox.innerHTML = `<option value="AUTO">Auto-Detect from Sheet / Title / Column</option>` +
+          `<option value="NEW">+ New Toolbox / Tool Set (Enter Name)</option>` +
+          `<option value="Common Tools">Common Tools (Tool-Wise)</option>` +
+          boxNames.map(b => `<option value="${b}">${b} (Toolbox-Wise)</option>`).join('');
+        if (currentTarget && (['AUTO', 'NEW', 'Common Tools'].includes(currentTarget) || boxNames.includes(currentTarget))) {
+          excelTargetBox.value = currentTarget;
+        }
+      }
+
+      // 1. Checkout Common Tool selector (ONLY Common Tools with availableQty > 0)
+      const select = document.getElementById('checkout-tool-id');
+      if (select) {
+        const commonAvailable = tools.filter(t => t.toolbox === 'Common Tools' && t.availableQty > 0);
+        select.innerHTML = commonAvailable.map(t => `
+          <option value="${t.id}">${t.name} - ${t.specification} (Avail: ${t.availableQty})</option>
+        `).join('');
+        updateCheckoutToolInfo();
+      }
+
+      // 1.5 Checkout Complete Toolbox selector (All Toolboxes)
+      const boxSelect = document.getElementById('checkout-toolbox-select');
+      if (boxSelect) {
+        const activeLoans = toolLoans.filter(l => l.status === 'Active' && l.loanType === 'TOOLBOX');
+        boxSelect.innerHTML = boxNames.map(boxName => {
+          const activeLoan = activeLoans.find(l => l.toolbox === boxName);
+          const boxTools = tools.filter(t => t.toolbox === boxName);
+          const statusText = activeLoan ? `(Currently Issued to ${activeLoan.techName})` : `(${boxTools.length} Tool Types Available)`;
+          return `<option value="${boxName}" ${activeLoan ? 'disabled' : ''}>${boxName} ${statusText}</option>`;
+        }).join('');
+        updateCheckoutToolboxPreview();
+      }
+
+      // 2. Checkout Tech selector
+      const techSelect = document.getElementById('checkout-tech-id');
+      if (techSelect) {
+        if (technicians.length === 0) {
+          techSelect.innerHTML = `<option value="">-- No Technicians Added (Add in Technicians Tab) --</option>`;
+        } else {
+          techSelect.innerHTML = technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
+        }
+      }
+
+      // 3. Checkout Machine selector
+      const mchSelect = document.getElementById('checkout-machine-id');
+      if (mchSelect) {
+        mchSelect.innerHTML = `<option value="-">General Workshop / Floor</option>` +
+          machines.map(m => `<option value="${m.id}">${m.code} - ${m.name}</option>`).join('');
+      }
+    }
+
+    function updateCheckoutToolboxPreview() {
+      const boxName = document.getElementById('checkout-toolbox-select')?.value || 'Toolbox 1';
+      const boxTools = tools.filter(t => t.toolbox === boxName);
+      const badgeEl = document.getElementById('checkout-toolbox-count-badge');
+      const previewEl = document.getElementById('checkout-toolbox-items-preview');
+
+      const totalUnits = boxTools.reduce((s, t) => s + (t.totalQty || 0), 0);
+      if (badgeEl) badgeEl.textContent = `${boxTools.length} tool types (${totalUnits} pcs)`;
+
+      if (previewEl) {
+        if (boxTools.length === 0) {
+          previewEl.innerHTML = `<p class="text-slate-500 py-2">No tools registered in ${boxName}.</p>`;
+        } else {
+          previewEl.innerHTML = boxTools.map(t => `
+            <div class="py-1 flex items-center justify-between">
+              <span class="text-white font-medium">${t.name} <span class="text-cyan-400 font-mono">(${t.specification})</span></span>
+              <span class="font-mono text-emerald-400 font-bold">Qty: ${t.totalQty}</span>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    function filterCheckoutTools() {
+      const q = document.getElementById('tool-checkout-search')?.value.toLowerCase() || '';
+      const select = document.getElementById('checkout-tool-id');
+      if (!select) return;
+
+      const filtered = tools.filter(t => t.toolbox === 'Common Tools' && t.availableQty > 0 && (
+        t.name.toLowerCase().includes(q) || 
+        t.specification.toLowerCase().includes(q)
+      ));
+
+      select.innerHTML = filtered.map(t => `
+        <option value="${t.id}">${t.name} - ${t.specification} (Avail: ${t.availableQty})</option>
+      `).join('');
+      updateCheckoutToolInfo();
+    }
+
+    function updateCheckoutToolInfo() {
+      const id = document.getElementById('checkout-tool-id')?.value;
+      const tool = tools.find(t => t.id === id);
+      const boxEl = document.getElementById('checkout-tool-box');
+      const availEl = document.getElementById('checkout-tool-avail');
+
+      if (tool) {
+        if (boxEl) boxEl.textContent = tool.toolbox;
+        if (availEl) availEl.textContent = tool.availableQty;
+      } else {
+        if (boxEl) boxEl.textContent = 'Common Tools';
+        if (availEl) availEl.textContent = '0';
+      }
+    }
+
+    function quickToolCheckoutModal(toolId) {
+      openToolCheckoutMode('TOOL');
+      const select = document.getElementById('checkout-tool-id');
+      if (select) {
+        select.value = toolId;
+        updateCheckoutToolInfo();
+      }
+    }
+
+    function quickToolboxCheckoutModal(boxName) {
+      openToolCheckoutMode('TOOLBOX');
+      const boxSelect = document.getElementById('checkout-toolbox-select');
+      if (boxSelect) {
+        boxSelect.value = boxName;
+        updateCheckoutToolboxPreview();
+      }
+    }
+
+    function handleToolCheckoutSubmit(e) {
+      e.preventDefault();
+      const techId = document.getElementById('checkout-tech-id').value;
+      const machineId = document.getElementById('checkout-machine-id').value;
+      const expectedReturn = document.getElementById('checkout-return-date').value;
+      const notes = document.getElementById('checkout-notes').value;
+
+      const tech = technicians.find(t => t.id === techId);
+      const machine = machines.find(m => m.id === machineId);
+
+      if (!tech) {
+        showToast("Please select a Technician to issue to!", "error");
+        return;
+      }
+
+      const issueDate = new Date().toISOString().split('T')[0];
+      const issueTime = new Date().toTimeString().slice(0,5);
+
+      if (currentToolCheckoutMode === 'TOOLBOX') {
+        // --- TOOLBOX-WISE ISSUE ---
+        const boxName = document.getElementById('checkout-toolbox-select').value;
+        const boxTools = tools.filter(t => t.toolbox === boxName);
+
+        if (boxTools.length === 0) {
+          showToast(`No tools found inside ${boxName}!`, "error");
+          return;
+        }
+
+        const alreadyIssued = toolLoans.some(l => l.status === 'Active' && l.loanType === 'TOOLBOX' && l.toolbox === boxName);
+        if (alreadyIssued) {
+          showToast(`${boxName} is already issued out! Please receive it back first.`, "error");
+          return;
+        }
+
+        let totalPcs = 0;
+        boxTools.forEach(t => {
+          totalPcs += (t.totalQty || 0);
+          t.inUseQty = t.totalQty;
+          t.availableQty = 0;
+          syncItemToCloud('tools', t);
+        });
+
+        const newLoan = {
+          id: `LN-BOX-${Date.now()}`,
+          loanType: 'TOOLBOX',
+          toolId: boxName,
+          toolName: boxName,
+          specification: `Complete Toolbox (${boxTools.length} Tool Types / ${totalPcs} pcs)`,
+          toolbox: boxName,
+          techId: tech.id,
+          techName: tech.name,
+          machineId: machine ? machine.id : '-',
+          machineName: machine ? machine.name : 'Workshop',
+          qty: totalPcs,
+          issueDate: issueDate,
+          issueTime: issueTime,
+          expectedReturnDate: expectedReturn,
+          returnDate: null,
+          conditionOnReturn: null,
+          status: 'Active',
+          notes: notes || `Complete ${boxName} issued to ${tech.name}`
+        };
+
+        toolLoans.push(newLoan);
+        syncItemToCloud('toolLoans', newLoan);
+
+        const newTx = {
+          id: `TX-TB-${Date.now()}`,
+          date: issueDate,
+          time: issueTime,
+          type: 'TOOL-CHECKOUT',
+          partId: boxName,
+          partName: `${boxName} (Complete Set - ${boxTools.length} Tool Types)`,
+          sku: `TOOLBOX-${boxName.replace(/\s+/g, '')}`,
+          cupboard: boxName,
+          rack: 'Toolbox Station',
+          qty: totalPcs,
+          unitCost: 0,
+          totalCost: 0,
+          machineId: machine ? machine.id : '-',
+          machineName: machine ? machine.name : 'Workshop',
+          techId: tech.id,
+          techName: tech.name,
+          workOrder: `TB-ISSUE-${boxName.slice(-1)}`,
+          purpose: 'Toolbox-Wise Issue',
+          notes: notes || `Issued complete ${boxName} to ${tech.name}`
+        };
+        transactions.push(newTx);
+        syncItemToCloud('transactions', newTx);
+
+        saveState();
+        closeModal('toolCheckoutModal');
+        renderTools();
+        populateToolDropdowns();
+        renderLogs();
+        updateDashboardData();
+
+        showToast(`Issued complete ${boxName} (${totalPcs} tools) to ${tech.name}!`, "success");
+
+      } else {
+        // --- COMMON TOOL (TOOL-WISE) ISSUE ---
+        const toolId = document.getElementById('checkout-tool-id').value;
+        const qty = parseInt(document.getElementById('checkout-qty').value) || 1;
+        const tool = tools.find(t => t.id === toolId);
+
+        if (!tool || tool.availableQty < qty) {
+          showToast("Cannot issue! Selected Common Tool is not available in requested quantity.", "error");
+          return;
+        }
+
+        tool.availableQty -= qty;
+        tool.inUseQty = (tool.inUseQty || 0) + qty;
+        syncItemToCloud('tools', tool);
+
+        const newLoan = {
+          id: `LN-TL-${Date.now()}`,
+          loanType: 'COMMON_TOOL',
+          toolId: tool.id,
+          toolName: tool.name,
+          specification: tool.specification,
+          toolbox: tool.toolbox,
+          techId: tech.id,
+          techName: tech.name,
+          machineId: machine ? machine.id : '-',
+          machineName: machine ? machine.name : 'Workshop',
+          qty: qty,
+          issueDate: issueDate,
+          issueTime: issueTime,
+          expectedReturnDate: expectedReturn,
+          returnDate: null,
+          conditionOnReturn: null,
+          status: 'Active',
+          notes: notes || `Common tool issued to ${tech.name}`
+        };
+
+        toolLoans.push(newLoan);
+        syncItemToCloud('toolLoans', newLoan);
+
+        const newTx = {
+          id: `TX-TL-${Date.now()}`,
+          date: issueDate,
+          time: issueTime,
+          type: 'TOOL-CHECKOUT',
+          partId: tool.id,
+          partName: `${tool.name} (${tool.specification})`,
+          sku: `COMMON-TOOL`,
+          cupboard: tool.toolbox,
+          rack: 'Common Tool Rack',
+          qty: qty,
+          unitCost: 0,
+          totalCost: 0,
+          machineId: machine ? machine.id : '-',
+          machineName: machine ? machine.name : 'Workshop',
+          techId: tech.id,
+          techName: tech.name,
+          workOrder: `TL-ISSUE-${tool.id.slice(-4)}`,
+          purpose: 'Common Tool Issue (Tool-Wise)',
+          notes: notes || `Issued ${qty}x ${tool.name} (${tool.specification})`
+        };
+        transactions.push(newTx);
+        syncItemToCloud('transactions', newTx);
+
+        saveState();
+        closeModal('toolCheckoutModal');
+        renderTools();
+        populateToolDropdowns();
+        renderLogs();
+        updateDashboardData();
+
+        showToast(`Issued ${qty}x ${tool.name} (${tool.specification}) to ${tech.name}.`, "success");
+      }
+    }
+
+    function promptReturnTool(loanId) {
+      const loan = toolLoans.find(l => l.id === loanId);
+      if (!loan) return;
+
+      document.getElementById('return-loan-id').value = loan.id;
+      document.getElementById('return-tool-name').textContent = `${loan.toolName} (${loan.specification})`;
+      document.getElementById('return-tool-box').textContent = loan.loanType === 'TOOLBOX' ? `${loan.toolbox} (Complete Toolbox-Wise)` : `${loan.toolbox} (Tool-Wise)`;
+      document.getElementById('return-tech-name').textContent = loan.techName;
+      document.getElementById('return-machine-name').textContent = loan.machineName;
+      document.getElementById('return-loan-qty').textContent = loan.loanType === 'TOOLBOX' ? `All ${loan.qty} pcs in ${loan.toolbox}` : loan.qty;
+
+      openModal('toolReturnModal');
+    }
+
+    function handleToolReturnSubmit(e) {
+      e.preventDefault();
+      const loanId = document.getElementById('return-loan-id').value;
+      const condition = document.getElementById('return-condition').value;
+      const notes = document.getElementById('return-notes').value;
+
+      const loan = toolLoans.find(l => l.id === loanId);
+      if (!loan) return;
+
+      const returnDate = new Date().toISOString().split('T')[0];
+      const returnTime = new Date().toTimeString().slice(0,5);
+
+      if (loan.loanType === 'TOOLBOX') {
+        // Restore all tools belonging to this Toolbox
+        const boxTools = tools.filter(t => t.toolbox === loan.toolbox);
+        boxTools.forEach(t => {
+          t.availableQty = t.totalQty;
+          t.inUseQty = 0;
+          syncItemToCloud('tools', t);
+        });
+      } else {
+        // Restore individual Common Tool
+        const tool = tools.find(t => t.id === loan.toolId);
+        if (tool) {
+          tool.availableQty = Math.min(tool.totalQty, tool.availableQty + loan.qty);
+          tool.inUseQty = Math.max(0, (tool.inUseQty || 0) - loan.qty);
+          syncItemToCloud('tools', tool);
+        }
+      }
+
+      loan.status = 'Returned';
+      loan.returnDate = `${returnDate} ${returnTime}`;
+      loan.conditionOnReturn = condition;
+      if (notes) {
+        loan.notes = (loan.notes ? loan.notes + ' | ' : '') + `Receive Note: ${notes}`;
+      }
+
+      syncItemToCloud('toolLoans', loan);
+
+      // Log transaction record for tool / toolbox receive
+      const returnTx = {
+        id: `TX-TR-${Date.now()}`,
+        date: returnDate,
+        time: returnTime,
+        type: 'TOOL-RETURN',
+        partId: loan.toolId,
+        partName: `${loan.toolName} (${loan.specification})`,
+        sku: loan.loanType === 'TOOLBOX' ? `TOOLBOX-${loan.toolbox.replace(/\s+/g, '')}` : `COMMON-TOOL`,
+        cupboard: loan.toolbox,
+        rack: loan.loanType === 'TOOLBOX' ? 'Toolbox Station' : 'Common Tool Rack',
+        qty: loan.qty,
+        unitCost: 0,
+        totalCost: 0,
+        machineId: loan.machineId,
+        machineName: loan.machineName,
+        techId: loan.techId,
+        techName: loan.techName,
+        workOrder: `RECEIVE-${loan.id.slice(-4)}`,
+        purpose: loan.loanType === 'TOOLBOX' ? 'Toolbox-Wise Receive' : 'Common Tool Receive (Tool-Wise)',
+        notes: `Condition: ${condition} ${notes ? '- ' + notes : ''}`
+      };
+      transactions.push(returnTx);
+      syncItemToCloud('transactions', returnTx);
+
+      saveState();
+      closeModal('toolReturnModal');
+      renderTools();
+      populateToolDropdowns();
+      renderLogs();
+      updateDashboardData();
+
+      showToast(`Received ${loan.toolName} back from ${loan.techName}!`, "success");
+    }
+
+    function toggleCustomToolboxInput(val) {
+      const customInput = document.getElementById('add-tool-custom-box');
+      if (!customInput) return;
+      if (val === '__NEW__') {
+        customInput.classList.remove('hidden');
+        customInput.required = true;
+        customInput.focus();
+      } else {
+        customInput.classList.add('hidden');
+        customInput.required = false;
+      }
+    }
+
+    function handleAddToolSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('add-tool-name').value.trim();
+      const spec = document.getElementById('add-tool-spec').value.trim();
+      let box = document.getElementById('add-tool-location').value;
+      const customBox = document.getElementById('add-tool-custom-box')?.value.trim();
+      if (box === '__NEW__') {
+        if (!customBox) {
+          showToast("Please enter a name for the new Toolbox!", "error");
+          return;
+        }
+        box = customBox;
+      }
+      const qty = parseInt(document.getElementById('add-tool-qty').value) || 1;
+
+      const newTool = {
+        id: `TL-${Date.now()}`,
+        name: name,
+        specification: spec,
+        toolbox: box,
+        totalQty: qty,
+        availableQty: qty,
+        inUseQty: 0
+      };
+
+      tools.push(newTool);
+      syncItemToCloud('tools', newTool);
+      saveState();
+
+      const customInput = document.getElementById('add-tool-custom-box');
+      if (customInput) {
+        customInput.value = '';
+        customInput.classList.add('hidden');
+      }
+
+      closeModal('addToolModal');
+      populateToolDropdowns();
+      renderTools();
+
+      showToast(`Added new tool: ${name} (${spec}) to ${box}!`, "success");
+    }
+
+    function seedInitialToolsManual() {
+      let added = 0;
+      DEFAULT_TOOLS.forEach(defTool => {
+        const exists = tools.some(t => 
+          t.toolbox.toLowerCase() === defTool.toolbox.toLowerCase() &&
+          t.name.toLowerCase() === defTool.name.toLowerCase() &&
+          String(t.specification).toLowerCase() === String(defTool.specification).toLowerCase()
+        );
+        if (!exists) {
+          const copy = { ...defTool };
+          tools.push(copy);
+          syncItemToCloud('tools', copy);
+          added++;
+        }
+      });
+      localStorage.setItem('maint_tools_seeded_v2', 'true');
+      saveState();
+      populateToolDropdowns();
+      renderTools();
+      if (added > 0) {
+        showToast(`Loaded ${added} initial tools across Common Tools & Toolboxes 1–5!`, "success");
+      } else {
+        showToast("All initial tools (Common Tools & Toolboxes 1–5) are already in the system!", "info");
+      }
+    }
+
+    // --- EXCEL UPLOAD FOR TOOLS SET OR TOOLBOX ---
+    function handleExcelToolBoxTargetChange(val) {
+      const wrap = document.getElementById('excel-new-toolbox-name-wrap');
+      if (wrap) {
+        wrap.classList.toggle('hidden', val !== 'NEW');
+      }
+      reapplyExcelToolboxOverride();
+    }
+
+    function getSelectedExcelToolboxOverride() {
+      const targetVal = document.getElementById('excel-tool-target-box')?.value || 'AUTO';
+      if (targetVal === 'NEW') {
+        return document.getElementById('excel-new-toolbox-name')?.value.trim() || 'New Toolbox';
+      } else if (targetVal !== 'AUTO') {
+        return targetVal;
+      }
+      return null; // AUTO
+    }
+
+    function reapplyExcelToolboxOverride() {
+      if (!parsedToolExcelData || parsedToolExcelData.length === 0) return;
+      const overrideBox = getSelectedExcelToolboxOverride();
+      parsedToolExcelData.forEach(item => {
+        item.toolbox = overrideBox || item.detectedToolbox || 'Common Tools';
+      });
+      renderExcelToolPreview();
+    }
+
+    function renderExcelToolPreview() {
+      const container = document.getElementById('excel-tool-preview-container');
+      const countEl = document.getElementById('excel-tool-count');
+      const tbody = document.getElementById('excel-tool-preview-tbody');
+      const btn = document.getElementById('btn-confirm-excel-tool-import');
+
+      if (!parsedToolExcelData || parsedToolExcelData.length === 0) {
+        if (container) container.classList.add('hidden');
+        if (btn) btn.disabled = true;
+        return;
+      }
+
+      if (container) container.classList.remove('hidden');
+      if (countEl) countEl.textContent = parsedToolExcelData.length;
+      if (btn) btn.disabled = false;
+
+      if (tbody) {
+        tbody.innerHTML = parsedToolExcelData.map(item => `
+          <tr class="hover:bg-slate-800">
+            <td class="p-2 font-semibold text-white">${item.name}</td>
+            <td class="p-2 font-mono text-cyan-400">${item.specification}</td>
+            <td class="p-2"><span class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-amber-300 font-medium">${item.toolbox}</span></td>
+            <td class="p-2 text-right font-bold text-emerald-400">${item.qty}</td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    function handleExcelToolFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      document.getElementById('excel-tool-file-name').textContent = `File selected: ${file.name}`;
+      const reader = new FileReader();
+
+      reader.onload = function(evt) {
+        try {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const results = [];
+          const overrideBox = getSelectedExcelToolboxOverride();
+
+          workbook.SheetNames.forEach(sheetName => {
+            const worksheet = workbook.Sheets[sheetName];
+            // Read as 2D array of rows so we can support title rows (e.g. "Toolbox 1") and grouped/merged tool names
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+            if (!rows || rows.length === 0) return;
+
+            let detectedBoxForSheet = sheetName.trim();
+            if (/^sheet\d*$/i.test(detectedBoxForSheet)) {
+              detectedBoxForSheet = 'Common Tools';
+            }
+
+            let colIdxName = 0;
+            let colIdxSpec = 1;
+            let colIdxQty = 2;
+            let colIdxBox = -1;
+            let startRow = 0;
+
+            // Scan first 5 rows for either a single title cell (like "Common Tools" or "Toolbox 1") or header row ("Tool name", "Specification", "Quantity")
+            for (let r = 0; r < Math.min(rows.length, 6); r++) {
+              const rowCells = rows[r].map(c => String(c).trim());
+              const nonEmpty = rowCells.filter(Boolean);
+
+              // Single title cell row (e.g., Row 0: ["Toolbox 1", "", ""])
+              if (nonEmpty.length === 1 && !/tool|spec|qty|quantity/i.test(nonEmpty[0])) {
+                detectedBoxForSheet = nonEmpty[0];
+                startRow = r + 1;
+                continue;
+              }
+
+              // Check if this row is the column header row
+              const nameIdx = rowCells.findIndex(c => /^(tool\s*name|tool|item\s*name|name|description)$/i.test(c));
+              const specIdx = rowCells.findIndex(c => /^(specification|spec|size|model|type)$/i.test(c));
+              const qtyIdx = rowCells.findIndex(c => /^(quantity|qty|count|total)$/i.test(c));
+              const boxIdx = rowCells.findIndex(c => /^(toolbox|location|box|set|tool\s*set|category)$/i.test(c));
+
+              if (nameIdx !== -1 || specIdx !== -1 || qtyIdx !== -1) {
+                if (nameIdx !== -1) colIdxName = nameIdx;
+                if (specIdx !== -1) colIdxSpec = specIdx;
+                if (qtyIdx !== -1) colIdxQty = qtyIdx;
+                if (boxIdx !== -1) colIdxBox = boxIdx;
+                startRow = r + 1;
+                break;
+              }
+            }
+
+            let lastToolName = "";
+
+            for (let r = startRow; r < rows.length; r++) {
+              const row = rows[r];
+              if (!row || row.length === 0) continue;
+
+              const rawName = String(row[colIdxName] ?? "").trim();
+              const rawSpec = String(row[colIdxSpec] ?? "").trim();
+              const rawQty = String(row[colIdxQty] ?? "").trim();
+              const rawBox = colIdxBox !== -1 ? String(row[colIdxBox] ?? "").trim() : "";
+
+              // Skip completely empty rows
+              if (!rawName && !rawSpec && !rawQty) continue;
+
+              // Check if a mid-sheet section header row appeared (e.g. ["Toolbox 2", "", ""])
+              if (rawName && !rawSpec && !rawQty && /^(common\s*tools|toolbox\s*\d+|.+toolbox.*)$/i.test(rawName)) {
+                detectedBoxForSheet = rawName;
+                lastToolName = "";
+                continue;
+              }
+
+              // Skip repeated header rows
+              if (/^(tool\s*name|tool)$/i.test(rawName) && /^(specification|spec)$/i.test(rawSpec)) {
+                continue;
+              }
+
+              // Carry-forward Tool Name if blank (matches user's screenshot tables where Spanner / Allenkey set / Open Wrench has multiple spec rows)
+              const finalName = rawName || lastToolName;
+              if (!finalName) continue;
+              lastToolName = finalName;
+
+              const finalSpec = rawSpec || 'Standard';
+              const parsedQty = rawQty === "" ? 1 : (parseInt(rawQty, 10) || 0);
+              const detectedToolbox = rawBox || detectedBoxForSheet || 'Common Tools';
+
+              results.push({
+                name: finalName,
+                specification: finalSpec,
+                detectedToolbox: detectedToolbox,
+                toolbox: overrideBox || detectedToolbox,
+                qty: Math.max(0, parsedQty)
+              });
+            }
+          });
+
+          if (results.length === 0) {
+            showToast("Could not find valid tool rows in the Excel file!", "error");
+            return;
+          }
+
+          parsedToolExcelData = results;
+          renderExcelToolPreview();
+          showToast(`Successfully parsed ${results.length} tools from Excel!`, "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Failed to parse Tools Excel file. Please check file format.", "error");
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function confirmExcelToolImport() {
+      if (!parsedToolExcelData || parsedToolExcelData.length === 0) return;
+
+      const targetSelect = document.getElementById('excel-tool-target-box')?.value;
+      if (targetSelect === 'NEW') {
+        const customName = document.getElementById('excel-new-toolbox-name')?.value.trim();
+        if (!customName) {
+          showToast("Please enter a name for the New Toolbox / Tool Set!", "error");
+          document.getElementById('excel-new-toolbox-name')?.focus();
+          return;
+        }
+        parsedToolExcelData.forEach(item => { item.toolbox = customName; });
+      }
+
+      const importMode = document.getElementById('excel-tool-import-mode')?.value || 'MERGE';
+
+      if (importMode === 'REPLACE_BOX') {
+        const boxesInUpload = [...new Set(parsedToolExcelData.map(i => i.toolbox))];
+        boxesInUpload.forEach(boxName => {
+          const toDelete = tools.filter(t => t.toolbox.toLowerCase() === boxName.toLowerCase());
+          toDelete.forEach(t => deleteItemFromCloud('tools', t.id));
+          tools = tools.filter(t => t.toolbox.toLowerCase() !== boxName.toLowerCase());
+        });
+      }
+
+      let addedCount = 0;
+      let updatedCount = 0;
+
+      parsedToolExcelData.forEach((item, idx) => {
+        const existing = tools.find(t =>
+          t.toolbox.toLowerCase() === item.toolbox.toLowerCase() &&
+          t.name.toLowerCase() === item.name.toLowerCase() &&
+          String(t.specification).toLowerCase() === String(item.specification).toLowerCase()
+        );
+
+        if (existing && importMode === 'MERGE') {
+          existing.totalQty += item.qty;
+          existing.availableQty += item.qty;
+          syncItemToCloud('tools', existing);
+          updatedCount++;
+        } else {
+          const newTool = {
+            id: `TL-XLS-${Date.now()}-${idx}`,
+            name: item.name,
+            specification: item.specification,
+            toolbox: item.toolbox,
+            totalQty: item.qty,
+            availableQty: item.qty,
+            inUseQty: 0
+          };
+          tools.push(newTool);
+          syncItemToCloud('tools', newTool);
+          addedCount++;
+        }
+      });
+
+      saveState();
+      parsedToolExcelData = [];
+      document.getElementById('excelToolFileInput').value = "";
+      document.getElementById('excel-tool-preview-container').classList.add('hidden');
+      document.getElementById('btn-confirm-excel-tool-import').disabled = true;
+      closeModal('excelToolUploadModal');
+
+      populateToolDropdowns();
+      renderTools();
+      showToast(`Tools Excel Import Complete! ${addedCount} tools added, ${updatedCount} updated.`, "success");
+    }
+
+    function downloadSampleToolExcel() {
+      const sampleRows = [
+        { "Tool name": "Double side open wrench", "Specification": "36-34", "Quantity": 1, "Toolbox": "Toolbox 6" },
+        { "Tool name": "", "Specification": "30-32", "Quantity": 1, "Toolbox": "Toolbox 6" },
+        { "Tool name": "Allenkey set", "Specification": "Complete set (1.5 to 10)", "Quantity": 1, "Toolbox": "Toolbox 6" },
+        { "Tool name": "Ball peen hammer", "Specification": "Standard", "Quantity": 1, "Toolbox": "Toolbox 6" },
+        { "Tool name": "Pipe Wrench", "Specification": "24\"", "Quantity": 2, "Toolbox": "Common Tools" }
+      ];
+      const ws = XLSX.utils.json_to_sheet(sampleRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Toolbox 6");
+      XLSX.writeFile(wb, "Maintenance_Tools_Toolbox_Template.xlsx");
+      showToast("Sample Tools / Toolbox Excel template downloaded!", "info");
+    }
+
+    function promptDeleteTool(toolId) {
+      const tool = tools.find(t => t.id === toolId);
+      if (!tool) return;
+
+      requestPasswordAuth(
+        "Authorize Tool Deletion",
+        `Deleting tool "${tool.name} (${tool.specification})". Enter master password to confirm.`,
+        () => {
+          tools = tools.filter(t => t.id !== toolId);
+          deleteItemFromCloud('tools', toolId);
+          saveState();
+          renderTools();
+          populateToolDropdowns();
+          showToast(`Tool ${tool.name} removed successfully!`, "amber");
         }
       );
     }
@@ -3007,6 +5053,11 @@
         csvContent += "SKU,Part Description,Category,Cupboard Number,Rack Number,Available Stock,Reorder Level,Unit Cost (Rs.),Total Value (Rs.)\n";
         inventory.forEach(p => {
           csvContent += `"${p.sku}","${p.name}","${p.category}","${p.cupboard || ''}","${p.rack || ''}",${p.qty},${p.minQty},${p.unitCost},${p.qty * p.unitCost}\n`;
+        });
+      } else if(type === 'tools') {
+        csvContent += "Tool Name,Specification/Size,Toolbox/Location,Total Quantity,Available Quantity,Currently In Use\n";
+        tools.forEach(t => {
+          csvContent += `"${t.name}","${t.specification}","${t.toolbox}",${t.totalQty},${t.availableQty},${t.inUseQty || 0}\n`;
         });
       } else if(type === 'logs') {
         csvContent += "Date,Time,Type,Work Order/GRN,SKU,Part Description,Cupboard,Rack,Target Machine,Technician,Qty,Unit Cost (Rs.),Total Cost (Rs.),Purpose/Notes\n";
