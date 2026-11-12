@@ -364,11 +364,14 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/60 pb-2.5">
           <div>
             <h3 class="text-sm font-bold text-white flex items-center gap-2">
-              <i class="fa-solid fa-toolbox text-amber-400"></i> Toolbox-Wise Issue & Receive Status
+              <i class="fa-solid fa-toolbox text-amber-400"></i> Toolbox Status & Contents Overview
             </h3>
-            <p class="text-xs text-slate-400">Toolbox tools are issued and received as a complete toolbox unit per technician</p>
+            <p class="text-xs text-slate-400">Issue a complete toolbox at once, or issue & receive individual tools from inside any toolbox below</p>
           </div>
           <div class="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+            <button onclick="openAllocateToolModal()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition-all">
+              <i class="fa-solid fa-right-left"></i> Allocate Tools to Toolbox
+            </button>
             <button onclick="openModal('excelToolUploadModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition-all">
               <i class="fa-solid fa-file-excel"></i> Upload Tools / Toolbox Excel
             </button>
@@ -393,12 +396,12 @@
           <!-- Toolbox / Location Filter -->
           <select id="tool-location-filter" onchange="renderTools()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
             <option value="ALL">All Locations & Toolboxes</option>
-            <option value="Common Tools">Common Tools (Issue Tool-Wise)</option>
-            <option value="Toolbox 1">Toolbox 1 (Issue Toolbox-Wise)</option>
-            <option value="Toolbox 2">Toolbox 2 (Issue Toolbox-Wise)</option>
-            <option value="Toolbox 3">Toolbox 3 (Issue Toolbox-Wise)</option>
-            <option value="Toolbox 4">Toolbox 4 (Issue Toolbox-Wise)</option>
-            <option value="Toolbox 5">Toolbox 5 (Issue Toolbox-Wise)</option>
+            <option value="Common Tools">Common Tools</option>
+            <option value="Toolbox 1">Toolbox 1</option>
+            <option value="Toolbox 2">Toolbox 2</option>
+            <option value="Toolbox 3">Toolbox 3</option>
+            <option value="Toolbox 4">Toolbox 4</option>
+            <option value="Toolbox 5">Toolbox 5</option>
           </select>
           <!-- Status Filter -->
           <select id="tool-status-filter" onchange="renderTools()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
@@ -412,11 +415,15 @@
         <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
           <button onclick="openToolCheckoutMode('TOOL')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all shadow">
             <i class="fa-solid fa-wrench"></i>
-            <span>Issue Common Tool</span>
+            <span>Issue Individual Tool</span>
           </button>
           <button onclick="openToolCheckoutMode('TOOLBOX')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all shadow">
             <i class="fa-solid fa-toolbox"></i>
             <span>Issue Toolbox</span>
+          </button>
+          <button onclick="openAllocateToolModal()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all shadow">
+            <i class="fa-solid fa-right-left"></i>
+            <span>Allocate to Toolbox</span>
           </button>
           <button onclick="openModal('excelToolUploadModal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold flex items-center gap-1.5 transition-all shadow">
             <i class="fa-solid fa-file-excel"></i>
@@ -1125,12 +1132,12 @@
           <input type="text" id="tech-name" required placeholder="e.g. Kasun Rajapaksha" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Designation / Specialty *</label>
-          <input type="text" id="tech-role" required placeholder="e.g. Senior Electrical Technician" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Role / Designation *</label>
+          <input type="text" id="tech-role" required placeholder="e.g. Senior Mechanical Technician" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Assigned Department *</label>
-          <input type="text" id="tech-dept" required placeholder="e.g. Electrical Maintenance" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Department</label>
+          <input type="text" id="tech-dept" placeholder="e.g. Mechanical Maintenance" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500">
         </div>
 
         <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
@@ -1141,7 +1148,7 @@
     </div>
   </div>
 
-  <!-- MODAL: TOOL CHECKOUT (ISSUE COMMON TOOL OR COMPLETE TOOLBOX TO TECH) -->
+  <!-- MODAL: TOOL CHECKOUT (ISSUE INDIVIDUAL TOOL OR COMPLETE TOOLBOX TO TECH) -->
   <div id="toolCheckoutModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
     <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
       <div class="flex items-center justify-between border-b border-slate-700 pb-3">
@@ -1151,33 +1158,51 @@
           </div>
           <div>
             <h3 class="font-bold text-slate-100" id="tool-checkout-modal-title">Issue Tool / Toolbox to Technician</h3>
-            <p class="text-xs text-slate-400">Common tools issue tool-wise | Toolboxes 1–5 issue toolbox-wise</p>
+            <p class="text-xs text-slate-400">Issue any individual tool (from Common Tools or inside a Toolbox) or a complete Toolbox</p>
           </div>
         </div>
         <button onclick="closeModal('toolCheckoutModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
 
-      <!-- Mode Switcher: Common Tool (Tool-Wise) vs Toolbox (Toolbox-Wise) -->
+      <!-- Mode Switcher: Individual Tool (Tool-Wise) vs Toolbox (Toolbox-Wise) -->
       <div class="grid grid-cols-2 gap-2 bg-slate-900 p-1.5 rounded-xl border border-slate-700">
         <button type="button" id="btn-mode-common-tool" onclick="setToolCheckoutMode('TOOL')" class="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all bg-amber-600 text-white shadow">
-          <i class="fa-solid fa-wrench"></i> Common Tool (Tool-Wise)
+          <i class="fa-solid fa-wrench"></i> Individual Tool (Any Toolbox)
         </button>
         <button type="button" id="btn-mode-toolbox" onclick="setToolCheckoutMode('TOOLBOX')" class="py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all text-slate-400 hover:text-white">
-          <i class="fa-solid fa-toolbox"></i> Toolbox 1–5 (Toolbox-Wise)
+          <i class="fa-solid fa-toolbox"></i> Complete Toolbox (All Items)
         </button>
       </div>
 
       <form id="toolCheckoutForm" onsubmit="handleToolCheckoutSubmit(event)" class="space-y-4">
-        <!-- SECTION A: COMMON TOOL (TOOL-WISE) SELECTION -->
+        <!-- SECTION A: INDIVIDUAL TOOL (FROM COMMON TOOLS OR INSIDE ANY TOOLBOX) -->
         <div id="checkout-common-tool-section" class="space-y-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Filter by Toolbox / Location</label>
+              <select id="checkout-tool-box-filter" onchange="filterCheckoutTools()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500">
+                <option value="ALL">All Locations & Toolboxes</option>
+                <option value="Common Tools">Common Tools</option>
+                <option value="Toolbox 1">Toolbox 1</option>
+                <option value="Toolbox 2">Toolbox 2</option>
+                <option value="Toolbox 3">Toolbox 3</option>
+                <option value="Toolbox 4">Toolbox 4</option>
+                <option value="Toolbox 5">Toolbox 5</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Search Tool / Size</label>
+              <input type="text" id="tool-checkout-search" oninput="filterCheckoutTools()" placeholder="e.g. Wrench, 17mm, Plier..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+
           <div>
-            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Select Common Tool (Tool-Wise) *</label>
-            <input type="text" id="tool-checkout-search" oninput="filterCheckoutTools()" placeholder="Search Common Tool by name or specification (e.g. Pipe Wrench, 17mm)..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-500 mb-1.5">
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Select Tool to Issue *</label>
             <select id="checkout-tool-id" onchange="updateCheckoutToolInfo()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
-              <!-- Populated via JS with Common Tools only -->
+              <!-- Populated via JS with Available Tools from Common Tools & Toolboxes -->
             </select>
             <div id="checkout-tool-info" class="text-xs text-slate-400 mt-1.5 flex justify-between bg-slate-900/60 p-2 rounded border border-slate-700/60">
-              <span>Category: <strong id="checkout-tool-box" class="text-cyan-400">Common Tools</strong></span>
+              <span>Located In: <strong id="checkout-tool-box" class="text-cyan-400">-</strong></span>
               <span>Available Qty: <strong id="checkout-tool-avail" class="text-emerald-400">0</strong></span>
             </div>
           </div>
@@ -1216,10 +1241,14 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Issue To Technician *</label>
-            <select id="checkout-tech-id" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
+            <div class="flex items-center justify-between mb-1">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider">Issue To Technician *</label>
+              <button type="button" onclick="openModal('addTechModal')" class="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold">+ Add Tech</button>
+            </div>
+            <select id="checkout-tech-id" onchange="toggleInlineTechInput()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500">
               <!-- Populated via JS -->
             </select>
+            <input type="text" id="checkout-quick-tech-name" placeholder="Enter Technician Name (e.g. Nimal)..." class="hidden mt-2 w-full bg-slate-900 border border-amber-500 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Target Machine / Bay *</label>
@@ -1357,6 +1386,87 @@
         <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
           <button type="button" onclick="closeModal('addToolModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
           <button type="submit" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg text-sm shadow">Save Tool</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ALLOCATE / TRANSFER TOOL TO TOOLBOX -->
+  <div id="allocateToolModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-purple-500/20 text-purple-400 p-2.5 rounded-xl border border-purple-500/30">
+            <i class="fa-solid fa-right-left text-lg"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-100">Allocate / Transfer Tool to Toolbox</h3>
+            <p class="text-xs text-slate-400">Assign or move tools between Common Tools and specific Toolboxes</p>
+          </div>
+        </div>
+        <button onclick="closeModal('allocateToolModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <form id="allocateToolForm" onsubmit="handleAllocateToolSubmit(event)" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Filter Source Location</label>
+            <select id="allocate-source-filter" onchange="filterAllocateSourceTools()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-purple-500">
+              <option value="ALL">All Locations & Toolboxes</option>
+              <option value="Common Tools">Common Tools</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Search Tool</label>
+            <input type="text" id="allocate-tool-search" oninput="filterAllocateSourceTools()" placeholder="Search tool name or spec..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Select Tool to Allocate *</label>
+          <select id="allocate-tool-id" required onchange="updateAllocateToolInfo()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+            <!-- Populated via JS -->
+          </select>
+          <div class="text-xs text-slate-400 mt-1.5 flex justify-between bg-slate-900/60 p-2 rounded border border-slate-700/60">
+            <span>Current Location: <strong id="allocate-current-box" class="text-cyan-400">-</strong></span>
+            <span>Available to Move: <strong id="allocate-avail-qty" class="text-emerald-400">0</strong> / Total: <strong id="allocate-total-qty" class="text-white">0</strong></span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Quantity to Allocate *</label>
+            <input type="number" id="allocate-qty" min="1" value="1" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Target Toolbox / Location *</label>
+            <select id="allocate-target-box" onchange="toggleAllocateCustomBox(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+              <option value="Toolbox 1">Toolbox 1</option>
+              <option value="Toolbox 2">Toolbox 2</option>
+              <option value="Toolbox 3">Toolbox 3</option>
+              <option value="Toolbox 4">Toolbox 4</option>
+              <option value="Toolbox 5">Toolbox 5</option>
+              <option value="Common Tools">Common Tools</option>
+              <option value="__NEW__">+ Create New Toolbox...</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="allocate-custom-box-wrap" class="hidden">
+          <label class="block text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1">New Toolbox Name *</label>
+          <input type="text" id="allocate-custom-box-input" placeholder="e.g. Toolbox 6 or Electrical Toolbox" class="w-full bg-slate-900 border border-purple-500 rounded-lg px-3 py-2 text-sm text-white focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Allocation Remarks (Optional)</label>
+          <input type="text" id="allocate-notes" placeholder="e.g. Allocated spanner from Common Tools into Toolbox 2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500">
+        </div>
+
+        <div class="flex justify-end gap-3 pt-3 border-t border-slate-700">
+          <button type="button" onclick="closeModal('allocateToolModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-lg text-sm shadow flex items-center gap-1.5">
+            <i class="fa-solid fa-check"></i> Confirm Allocation
+          </button>
         </div>
       </form>
     </div>
@@ -1923,8 +2033,12 @@ service cloud.firestore {
       const issuePartSelect = document.getElementById('issue-part-id');
       if (issuePartSelect) {
         const currentVal = issuePartSelect.value;
-        issuePartSelect.innerHTML = inventory.map(p => `<option value="${p.id}">${p.sku} - ${p.name} [Cat: ${p.category}] [${p.cupboard} / ${p.rack}] (Stock: ${p.qty})</option>`).join('');
-        if (inventory.some(p => p.id === currentVal)) issuePartSelect.value = currentVal;
+        if (inventory.length === 0) {
+          issuePartSelect.innerHTML = `<option value="">-- No Spare Parts in Inventory --</option>`;
+        } else {
+          issuePartSelect.innerHTML = inventory.map(p => `<option value="${p.id}">${p.sku} - ${p.name} [Cat: ${p.category}] [${p.cupboard} / ${p.rack}] (Stock: ${p.qty})</option>`).join('');
+          if (inventory.some(p => p.id === currentVal)) issuePartSelect.value = currentVal;
+        }
         updateIssueStockInfo();
       }
 
@@ -1932,15 +2046,17 @@ service cloud.firestore {
       const issueMchSelect = document.getElementById('issue-machine-id');
       if (issueMchSelect) {
         const currentVal = issueMchSelect.value;
-        issueMchSelect.innerHTML = machines.map(m => `<option value="${m.id}">${m.code} - ${m.name} (${m.department})</option>`).join('');
-        if (machines.some(m => m.id === currentVal)) issueMchSelect.value = currentVal;
+        issueMchSelect.innerHTML = `<option value="-">General Workshop / Floor</option>` +
+          machines.map(m => `<option value="${m.id}">${m.code} - ${m.name} (${m.department})</option>`).join('');
+        if (machines.some(m => m.id === currentVal) || currentVal === '-') issueMchSelect.value = currentVal;
       }
 
       // 6. Issue Modal Tech Dropdown
       const issueTechSelect = document.getElementById('issue-tech-id');
       if (issueTechSelect) {
         const currentVal = issueTechSelect.value;
-        issueTechSelect.innerHTML = technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
+        issueTechSelect.innerHTML = (technicians.length === 0 ? `<option value="-">General Maintenance Tech</option>` : '') +
+          technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
         if (technicians.some(t => t.id === currentVal)) issueTechSelect.value = currentVal;
       }
 
@@ -1948,8 +2064,12 @@ service cloud.firestore {
       const receivePartSelect = document.getElementById('receive-part-id');
       if (receivePartSelect) {
         const currentVal = receivePartSelect.value;
-        receivePartSelect.innerHTML = inventory.map(p => `<option value="${p.id}">${p.sku} - ${p.name} [Cat: ${p.category}] [${p.cupboard} / ${p.rack}] (Stock: ${p.qty})</option>`).join('');
-        if (inventory.some(p => p.id === currentVal)) receivePartSelect.value = currentVal;
+        if (inventory.length === 0) {
+          receivePartSelect.innerHTML = `<option value="">-- No Spare Parts in Inventory --</option>`;
+        } else {
+          receivePartSelect.innerHTML = inventory.map(p => `<option value="${p.id}">${p.sku} - ${p.name} [Cat: ${p.category}] [${p.cupboard} / ${p.rack}] (Stock: ${p.qty})</option>`).join('');
+          if (inventory.some(p => p.id === currentVal)) receivePartSelect.value = currentVal;
+        }
         updateReceiveLocationInfo();
       }
 
@@ -1957,8 +2077,9 @@ service cloud.firestore {
       const receiveTechSelect = document.getElementById('receive-tech-id');
       if (receiveTechSelect) {
         const currentVal = receiveTechSelect.value;
-        receiveTechSelect.innerHTML = technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
-        if (technicians.some(t => t.id === currentVal)) receiveTechSelect.value = currentVal;
+        receiveTechSelect.innerHTML = `<option value="-">Storekeeper</option>` +
+          technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
+        if (technicians.some(t => t.id === currentVal) || currentVal === '-') receiveTechSelect.value = currentVal;
       }
 
       // 9. Log Filters
@@ -3682,20 +3803,22 @@ service cloud.firestore {
       if (totalEl) totalEl.textContent = totalTools;
       if (commEl) commEl.textContent = commonToolsCount;
       if (boxEl) boxEl.textContent = boxesCount;
-      if (boxLabelEl) boxLabelEl.textContent = `Toolboxes (${allBoxNames.length})`;
+      if (boxLabelEl) boxLabelEl.textContent = `Toolboxes (${allBoxNames.length} Sets)`;
       if (inUseEl) inUseEl.textContent = inUseCount;
-      if (badgeEl) badgeEl.textContent = `${activeLoans.length} Active Issue${activeLoans.length === 1 ? '' : 's'}`;
+      if (badgeEl) badgeEl.textContent = `${inUseCount} In Use`;
 
-      // 1.5 Render Toolbox Status Grid (Toolbox-Wise Monitoring for all Toolboxes)
+      // 1.5 Render Toolbox Status Grid (Toolbox-Wise & Individual Tool Monitoring for all Toolboxes)
       const toolboxGrid = document.getElementById('toolboxes-status-grid');
       if (toolboxGrid) {
         toolboxGrid.innerHTML = allBoxNames.map(boxName => {
           const boxTools = tools.filter(t => t.toolbox === boxName);
           const totalPhysicalQty = boxTools.reduce((s, t) => s + (t.totalQty || 0), 0);
+          const availPhysicalQty = boxTools.reduce((s, t) => s + (t.availableQty || 0), 0);
+          const inUsePhysicalQty = boxTools.reduce((s, t) => s + (t.inUseQty || 0), 0);
           const activeBoxLoan = activeLoans.find(l => l.loanType === 'TOOLBOX' && l.toolbox === boxName);
-          const isIssued = Boolean(activeBoxLoan) || (boxTools.length > 0 && boxTools.every(t => t.availableQty === 0));
+          const activeIndividualLoans = activeLoans.filter(l => l.loanType !== 'TOOLBOX' && l.toolbox === boxName);
 
-          if (isIssued && activeBoxLoan) {
+          if (activeBoxLoan) {
             return `
               <div class="bg-slate-900/90 border border-amber-500/50 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 shadow">
                 <div>
@@ -3703,7 +3826,7 @@ service cloud.firestore {
                     <span class="font-bold text-white text-xs sm:text-sm flex items-center gap-1.5">
                       <i class="fa-solid fa-toolbox text-amber-400"></i> ${boxName}
                     </span>
-                    <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold uppercase">Issued</span>
+                    <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-bold uppercase">Full Box Issued</span>
                   </div>
                   <p class="text-[11px] text-slate-400 mt-1">${boxTools.length} Tool Types (${totalPhysicalQty} pcs)</p>
                   <div class="mt-2 bg-slate-800/90 p-2 rounded-lg border border-slate-700 text-[11px] space-y-0.5">
@@ -3723,25 +3846,38 @@ service cloud.firestore {
               </div>
             `;
           } else {
+            const hasPartialOut = inUsePhysicalQty > 0;
             return `
-              <div class="bg-slate-900/60 border border-slate-700/80 hover:border-cyan-500/40 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 transition-all">
+              <div class="bg-slate-900/60 border ${hasPartialOut ? 'border-cyan-500/50' : 'border-slate-700/80'} hover:border-cyan-500/40 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 transition-all">
                 <div>
                   <div class="flex items-center justify-between">
                     <span class="font-bold text-white text-xs sm:text-sm flex items-center gap-1.5">
                       <i class="fa-solid fa-toolbox text-cyan-400"></i> ${boxName}
                     </span>
-                    <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">Available</span>
+                    ${hasPartialOut
+                      ? `<span class="text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-semibold">${inUsePhysicalQty} Tool(s) Out</span>`
+                      : `<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-semibold">Available</span>`
+                    }
                   </div>
-                  <p class="text-[11px] text-slate-400 mt-1">${boxTools.length} Tool Types (${totalPhysicalQty} pcs)</p>
-                  <p class="text-[11px] text-emerald-400/90 mt-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2 flex items-center gap-1.5">
-                    <i class="fa-solid fa-circle-check"></i> Ready in Maintenance Store
-                  </p>
+                  <p class="text-[11px] text-slate-400 mt-1">${boxTools.length} Tool Types (${availPhysicalQty}/${totalPhysicalQty} pcs avail)</p>
+                  ${hasPartialOut
+                    ? `<div class="mt-2 bg-cyan-500/10 border border-cyan-500/20 rounded-lg p-2 text-[11px] text-cyan-200">
+                        <p class="font-semibold">${activeIndividualLoans.length} individual loan(s) active</p>
+                        <p class="text-[10px] text-slate-300 truncate">${activeIndividualLoans.map(l => `${l.toolName} (${l.techName})`).join(', ')}</p>
+                      </div>`
+                    : `<p class="text-[11px] text-emerald-400/90 mt-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check"></i> All Tools in Toolbox
+                      </p>`
+                  }
                 </div>
-                <div class="flex gap-1.5 pt-1">
-                  <button onclick="quickToolboxCheckoutModal('${boxName}')" ${boxTools.length === 0 ? 'disabled' : ''} class="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white py-1.5 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 shadow transition-all">
-                    <i class="fa-solid fa-hand-holding-hand"></i> Issue Toolbox
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                  <button onclick="openIssueToolFromBox('${boxName}')" ${availPhysicalQty === 0 ? 'disabled' : ''} title="Issue an individual tool from inside ${boxName}" class="flex-1 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 shadow transition-all">
+                    <i class="fa-solid fa-wrench"></i> Issue Tool
                   </button>
-                  <button onclick="filterByToolbox('${boxName}')" title="View Toolbox Items" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs">
+                  <button onclick="quickToolboxCheckoutModal('${boxName}')" ${availPhysicalQty === 0 ? 'disabled' : ''} title="Issue entire ${boxName}" class="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white py-1.5 px-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1 shadow transition-all">
+                    <i class="fa-solid fa-toolbox"></i> Full Box
+                  </button>
+                  <button onclick="filterByToolbox('${boxName}')" title="Filter table to ${boxName}" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-2 py-1.5 rounded-lg text-xs">
                     <i class="fa-solid fa-eye"></i>
                   </button>
                 </div>
@@ -3767,7 +3903,7 @@ service cloud.firestore {
                 <div class="min-w-0 space-y-0.5">
                   <div class="flex items-center gap-1.5">
                     <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${isBox ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'}">
-                      ${isBox ? 'TOOLBOX-WISE' : 'COMMON TOOL'}
+                      ${isBox ? 'COMPLETE TOOLBOX' : `TOOL (${loan.toolbox})`}
                     </span>
                     <span class="text-[10px] font-mono text-slate-400">${loan.issueDate} ${loan.issueTime || ''}</span>
                   </div>
@@ -3812,19 +3948,19 @@ service cloud.firestore {
             const isOut = t.totalQty === 0;
             const isInUse = (t.inUseQty || 0) > 0;
 
-            // Find active loan for this tool or its toolbox
-            const activeLoan = activeLoans.find(l => 
-              (l.loanType === 'TOOLBOX' && l.toolbox === t.toolbox) || 
-              (l.loanType !== 'TOOLBOX' && l.toolId === t.id)
-            );
+            // Find active individual loan for this specific tool, or active full-toolbox loan
+            const activeToolLoan = activeLoans.find(l => l.loanType !== 'TOOLBOX' && l.toolId === t.id);
+            const activeBoxLoan = activeLoans.find(l => l.loanType === 'TOOLBOX' && l.toolbox === t.toolbox);
+            const primaryActiveLoan = activeToolLoan || activeBoxLoan;
 
             let statusBadge = '<span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded font-semibold">Available</span>';
             if (isOut) {
               statusBadge = '<span class="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded font-semibold">Zero Stock (0)</span>';
-            } else if (activeLoan) {
+            } else if (primaryActiveLoan) {
               statusBadge = `
-                <div class="flex flex-col items-center">
-                  <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-semibold">Issued to ${activeLoan.techName}</span>
+                <div class="flex flex-col items-center gap-0.5">
+                  <span class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-semibold">Issued to ${primaryActiveLoan.techName}</span>
+                  <span class="text-[9px] text-slate-400">${activeBoxLoan ? '(Full Toolbox Out)' : '(Individual Tool Out)'}</span>
                 </div>
               `;
             } else if (t.availableQty === 0) {
@@ -3841,36 +3977,24 @@ service cloud.firestore {
             else if (t.toolbox === 'Toolbox 4') locColor = 'bg-purple-500/10 text-purple-300 border-purple-500/30';
             else if (t.toolbox === 'Toolbox 5') locColor = 'bg-rose-500/10 text-rose-300 border-rose-500/30';
 
-            let actionButtonHtml = '';
-            if (isCommon) {
-              // Common tools -> Issued Tool-Wise
-              actionButtonHtml = `
-                <button onclick="quickToolCheckoutModal('${t.id}')" ${t.availableQty === 0 ? 'disabled' : ''} title="Issue Common Tool (Tool-Wise)" class="bg-amber-500/20 hover:bg-amber-500/40 disabled:opacity-30 disabled:cursor-not-allowed text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded transition-all text-xs flex items-center gap-1">
-                  <i class="fa-solid fa-wrench"></i> Issue Tool
+            // Every tool (whether in Common Tools or inside Toolbox 1-5) can be issued & received individually
+            let actionButtonHtml = `
+              <button onclick="quickToolCheckoutModal('${t.id}')" ${t.availableQty === 0 ? 'disabled' : ''} title="Issue this tool (${t.name} - ${t.specification}) from ${t.toolbox}" class="bg-amber-500/20 hover:bg-amber-500/40 disabled:opacity-30 disabled:cursor-not-allowed text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded transition-all text-xs flex items-center gap-1">
+                <i class="fa-solid fa-wrench"></i> Issue Tool
+              </button>
+            `;
+            if (activeToolLoan) {
+              actionButtonHtml += `
+                <button onclick="promptReturnTool('${activeToolLoan.id}')" title="Receive individual tool back into ${t.toolbox}" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded transition-all text-xs flex items-center gap-1">
+                  <i class="fa-solid fa-rotate-left"></i> Receive
                 </button>
               `;
-              if (activeLoan) {
-                actionButtonHtml += `
-                  <button onclick="promptReturnTool('${activeLoan.id}')" title="Receive Tool Back" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded transition-all text-xs flex items-center gap-1">
-                    <i class="fa-solid fa-rotate-left"></i> Receive
-                  </button>
-                `;
-              }
-            } else {
-              // Toolbox 1-5 tools -> Issued Toolbox-Wise
-              if (activeLoan) {
-                actionButtonHtml = `
-                  <button onclick="promptReturnTool('${activeLoan.id}')" title="Receive ${t.toolbox} back from technician" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/30 px-2.5 py-1 rounded transition-all text-xs flex items-center gap-1">
-                    <i class="fa-solid fa-rotate-left"></i> Receive ${t.toolbox}
-                  </button>
-                `;
-              } else {
-                actionButtonHtml = `
-                  <button onclick="quickToolboxCheckoutModal('${t.toolbox}')" title="Issue entire ${t.toolbox} (Toolbox-Wise)" class="bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded transition-all text-xs flex items-center gap-1">
-                    <i class="fa-solid fa-toolbox"></i> Issue ${t.toolbox}
-                  </button>
-                `;
-              }
+            } else if (activeBoxLoan) {
+              actionButtonHtml += `
+                <button onclick="promptReturnTool('${activeBoxLoan.id}')" title="Receive complete ${t.toolbox} back" class="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/30 px-2 py-1 rounded transition-all text-xs flex items-center gap-1">
+                  <i class="fa-solid fa-rotate-left"></i> Receive Box
+                </button>
+              `;
             }
 
             return `
@@ -3881,15 +4005,18 @@ service cloud.firestore {
                 <td class="py-3 px-4 font-mono text-cyan-400 font-medium text-xs">${t.specification || '-'}</td>
                 <td class="py-3 px-4 text-xs">
                   <span class="px-2 py-0.5 rounded border ${locColor} font-semibold">${t.toolbox}</span>
-                  <span class="block text-[10px] text-slate-400 mt-0.5">${isCommon ? 'Tool-Wise Issue' : 'Toolbox-Wise Issue'}</span>
+                  <span class="block text-[10px] text-slate-400 mt-0.5">${isCommon ? 'Common Store' : 'Inside Toolbox (Tool / Box Issue)'}</span>
                 </td>
                 <td class="py-3 px-4 text-center font-bold text-slate-200 text-xs">${t.totalQty}</td>
                 <td class="py-3 px-4 text-center font-bold text-xs ${t.availableQty > 0 ? 'text-emerald-400' : 'text-slate-500'}">${t.availableQty}</td>
                 <td class="py-3 px-4 text-center font-bold text-xs ${t.inUseQty > 0 ? 'text-amber-400' : 'text-slate-500'}">${t.inUseQty || 0}</td>
                 <td class="py-3 px-4 text-center">${statusBadge}</td>
                 <td class="py-3 px-4 text-center">
-                  <div class="flex items-center justify-center gap-1.5">
+                  <div class="flex items-center justify-center gap-1.5 flex-wrap">
                     ${actionButtonHtml}
+                    <button onclick="openAllocateToolModal('${t.id}')" title="Allocate / Move Tool to Another Toolbox" class="bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 border border-purple-500/30 px-2 py-1 rounded transition-all text-xs flex items-center gap-1">
+                      <i class="fa-solid fa-right-left"></i> Allocate
+                    </button>
                     <button onclick="promptDeleteTool('${t.id}')" title="Delete Tool (Password Required)" class="bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 p-1.5 rounded transition-all text-xs">
                       <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -3978,7 +4105,7 @@ service cloud.firestore {
         if (btnBox) btnBox.className = "py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all text-slate-400 hover:text-white";
         if (secTool) secTool.classList.remove('hidden');
         if (secBox) secBox.classList.add('hidden');
-        if (submitBtn) submitBtn.textContent = "Issue Common Tool";
+        if (submitBtn) submitBtn.textContent = "Issue Selected Tool";
         updateCheckoutToolInfo();
       }
     }
@@ -3991,6 +4118,15 @@ service cloud.firestore {
       openModal('toolCheckoutModal');
     }
 
+    function openIssueToolFromBox(boxName) {
+      openToolCheckoutMode('TOOL');
+      const boxFilter = document.getElementById('checkout-tool-box-filter');
+      if (boxFilter) {
+        boxFilter.value = boxName;
+        filterCheckoutTools();
+      }
+    }
+
     function populateToolDropdowns() {
       const boxNames = getAllToolboxNames();
 
@@ -3999,10 +4135,21 @@ service cloud.firestore {
       if (locFilter) {
         const currentLoc = locFilter.value;
         locFilter.innerHTML = `<option value="ALL">All Locations & Toolboxes</option>` +
-          `<option value="Common Tools">Common Tools (Issue Tool-Wise)</option>` +
-          boxNames.map(b => `<option value="${b}">${b} (Issue Toolbox-Wise)</option>`).join('');
+          `<option value="Common Tools">Common Tools</option>` +
+          boxNames.map(b => `<option value="${b}">${b}</option>`).join('');
         if (currentLoc === 'ALL' || currentLoc === 'Common Tools' || boxNames.includes(currentLoc)) {
           locFilter.value = currentLoc;
+        }
+      }
+
+      const checkoutBoxFilter = document.getElementById('checkout-tool-box-filter');
+      if (checkoutBoxFilter) {
+        const currentFilter = checkoutBoxFilter.value;
+        checkoutBoxFilter.innerHTML = `<option value="ALL">All Locations & Toolboxes</option>` +
+          `<option value="Common Tools">Common Tools</option>` +
+          boxNames.map(b => `<option value="${b}">${b}</option>`).join('');
+        if (currentFilter === 'ALL' || currentFilter === 'Common Tools' || boxNames.includes(currentFilter)) {
+          checkoutBoxFilter.value = currentFilter;
         }
       }
 
@@ -4022,22 +4169,15 @@ service cloud.firestore {
         const currentTarget = excelTargetBox.value;
         excelTargetBox.innerHTML = `<option value="AUTO">Auto-Detect from Sheet / Title / Column</option>` +
           `<option value="NEW">+ New Toolbox / Tool Set (Enter Name)</option>` +
-          `<option value="Common Tools">Common Tools (Tool-Wise)</option>` +
-          boxNames.map(b => `<option value="${b}">${b} (Toolbox-Wise)</option>`).join('');
+          `<option value="Common Tools">Common Tools</option>` +
+          boxNames.map(b => `<option value="${b}">${b}</option>`).join('');
         if (currentTarget && (['AUTO', 'NEW', 'Common Tools'].includes(currentTarget) || boxNames.includes(currentTarget))) {
           excelTargetBox.value = currentTarget;
         }
       }
 
-      // 1. Checkout Common Tool selector (ONLY Common Tools with availableQty > 0)
-      const select = document.getElementById('checkout-tool-id');
-      if (select) {
-        const commonAvailable = tools.filter(t => t.toolbox === 'Common Tools' && t.availableQty > 0);
-        select.innerHTML = commonAvailable.map(t => `
-          <option value="${t.id}">${t.name} - ${t.specification} (Avail: ${t.availableQty})</option>
-        `).join('');
-        updateCheckoutToolInfo();
-      }
+      // 1. Checkout Individual Tool selector (Supports tools in Common Tools AND inside any Toolbox)
+      filterCheckoutTools();
 
       // 1.5 Checkout Complete Toolbox selector (All Toolboxes)
       const boxSelect = document.getElementById('checkout-toolbox-select');
@@ -4046,8 +4186,11 @@ service cloud.firestore {
         boxSelect.innerHTML = boxNames.map(boxName => {
           const activeLoan = activeLoans.find(l => l.toolbox === boxName);
           const boxTools = tools.filter(t => t.toolbox === boxName);
-          const statusText = activeLoan ? `(Currently Issued to ${activeLoan.techName})` : `(${boxTools.length} Tool Types Available)`;
-          return `<option value="${boxName}" ${activeLoan ? 'disabled' : ''}>${boxName} ${statusText}</option>`;
+          const availPcs = boxTools.reduce((s, t) => s + (t.availableQty || 0), 0);
+          const statusText = activeLoan
+            ? `(Currently Issued to ${activeLoan.techName})`
+            : `(${boxTools.length} Tool Types / ${availPcs} pcs Available)`;
+          return `<option value="${boxName}" ${activeLoan || availPcs === 0 ? 'disabled' : ''}>${boxName} ${statusText}</option>`;
         }).join('');
         updateCheckoutToolboxPreview();
       }
@@ -4055,11 +4198,15 @@ service cloud.firestore {
       // 2. Checkout Tech selector
       const techSelect = document.getElementById('checkout-tech-id');
       if (techSelect) {
-        if (technicians.length === 0) {
-          techSelect.innerHTML = `<option value="">-- No Technicians Added (Add in Technicians Tab) --</option>`;
-        } else {
-          techSelect.innerHTML = technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('');
+        const currentTech = techSelect.value;
+        techSelect.innerHTML = technicians.map(t => `<option value="${t.id}">${t.name} (${t.role})</option>`).join('') +
+          `<option value="__QUICK__">+ Enter Technician Name Quickly...</option>`;
+        if (technicians.length > 0 && technicians.some(t => t.id === currentTech)) {
+          techSelect.value = currentTech;
+        } else if (technicians.length === 0) {
+          techSelect.value = '__QUICK__';
         }
+        toggleInlineTechInput();
       }
 
       // 3. Checkout Machine selector
@@ -4070,6 +4217,19 @@ service cloud.firestore {
       }
     }
 
+    function toggleInlineTechInput() {
+      const techSelect = document.getElementById('checkout-tech-id');
+      const quickInput = document.getElementById('checkout-quick-tech-name');
+      if (!techSelect || !quickInput) return;
+      if (techSelect.value === '__QUICK__' || technicians.length === 0) {
+        quickInput.classList.remove('hidden');
+        quickInput.required = true;
+      } else {
+        quickInput.classList.add('hidden');
+        quickInput.required = false;
+      }
+    }
+
     function updateCheckoutToolboxPreview() {
       const boxName = document.getElementById('checkout-toolbox-select')?.value || 'Toolbox 1';
       const boxTools = tools.filter(t => t.toolbox === boxName);
@@ -4077,7 +4237,8 @@ service cloud.firestore {
       const previewEl = document.getElementById('checkout-toolbox-items-preview');
 
       const totalUnits = boxTools.reduce((s, t) => s + (t.totalQty || 0), 0);
-      if (badgeEl) badgeEl.textContent = `${boxTools.length} tool types (${totalUnits} pcs)`;
+      const availUnits = boxTools.reduce((s, t) => s + (t.availableQty || 0), 0);
+      if (badgeEl) badgeEl.textContent = `${boxTools.length} tool types (${availUnits}/${totalUnits} pcs avail)`;
 
       if (previewEl) {
         if (boxTools.length === 0) {
@@ -4086,7 +4247,7 @@ service cloud.firestore {
           previewEl.innerHTML = boxTools.map(t => `
             <div class="py-1 flex items-center justify-between">
               <span class="text-white font-medium">${t.name} <span class="text-cyan-400 font-mono">(${t.specification})</span></span>
-              <span class="font-mono text-emerald-400 font-bold">Qty: ${t.totalQty}</span>
+              <span class="font-mono ${t.availableQty > 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold">Avail: ${t.availableQty}/${t.totalQty}</span>
             </div>
           `).join('');
         }
@@ -4094,18 +4255,28 @@ service cloud.firestore {
     }
 
     function filterCheckoutTools() {
-      const q = document.getElementById('tool-checkout-search')?.value.toLowerCase() || '';
+      const q = document.getElementById('tool-checkout-search')?.value.toLowerCase().trim() || '';
+      const boxFilter = document.getElementById('checkout-tool-box-filter')?.value || 'ALL';
       const select = document.getElementById('checkout-tool-id');
       if (!select) return;
 
-      const filtered = tools.filter(t => t.toolbox === 'Common Tools' && t.availableQty > 0 && (
-        t.name.toLowerCase().includes(q) || 
-        t.specification.toLowerCase().includes(q)
-      ));
+      const currentVal = select.value;
+      const filtered = tools.filter(t => {
+        const matchesAvail = t.availableQty > 0;
+        const matchesBox = boxFilter === 'ALL' || t.toolbox === boxFilter;
+        const matchesQuery = String(t.name || '').toLowerCase().includes(q) ||
+                             String(t.specification || '').toLowerCase().includes(q) ||
+                             String(t.toolbox || '').toLowerCase().includes(q);
+        return matchesAvail && matchesBox && matchesQuery;
+      });
 
       select.innerHTML = filtered.map(t => `
-        <option value="${t.id}">${t.name} - ${t.specification} (Avail: ${t.availableQty})</option>
+        <option value="${t.id}">[${t.toolbox}] ${t.name} - ${t.specification} (Avail: ${t.availableQty})</option>
       `).join('');
+
+      if (filtered.some(t => t.id === currentVal)) {
+        select.value = currentVal;
+      }
       updateCheckoutToolInfo();
     }
 
@@ -4114,18 +4285,30 @@ service cloud.firestore {
       const tool = tools.find(t => t.id === id);
       const boxEl = document.getElementById('checkout-tool-box');
       const availEl = document.getElementById('checkout-tool-avail');
+      const qtyInput = document.getElementById('checkout-qty');
 
       if (tool) {
         if (boxEl) boxEl.textContent = tool.toolbox;
         if (availEl) availEl.textContent = tool.availableQty;
+        if (qtyInput) {
+          qtyInput.max = tool.availableQty;
+          if (parseInt(qtyInput.value) > tool.availableQty) qtyInput.value = tool.availableQty;
+        }
       } else {
-        if (boxEl) boxEl.textContent = 'Common Tools';
+        if (boxEl) boxEl.textContent = '-';
         if (availEl) availEl.textContent = '0';
       }
     }
 
     function quickToolCheckoutModal(toolId) {
+      const tool = tools.find(t => t.id === toolId);
       openToolCheckoutMode('TOOL');
+      const boxFilter = document.getElementById('checkout-tool-box-filter');
+      const searchInput = document.getElementById('tool-checkout-search');
+      if (boxFilter) boxFilter.value = tool ? tool.toolbox : 'ALL';
+      if (searchInput) searchInput.value = '';
+      filterCheckoutTools();
+
       const select = document.getElementById('checkout-tool-id');
       if (select) {
         select.value = toolId;
@@ -4144,16 +4327,37 @@ service cloud.firestore {
 
     function handleToolCheckoutSubmit(e) {
       e.preventDefault();
-      const techId = document.getElementById('checkout-tech-id').value;
+      let techId = document.getElementById('checkout-tech-id').value;
+      const quickTechName = document.getElementById('checkout-quick-tech-name')?.value.trim();
       const machineId = document.getElementById('checkout-machine-id').value;
       const expectedReturn = document.getElementById('checkout-return-date').value;
       const notes = document.getElementById('checkout-notes').value;
 
-      const tech = technicians.find(t => t.id === techId);
+      let tech = technicians.find(t => t.id === techId);
+      if (!tech && (techId === '__QUICK__' || quickTechName)) {
+        if (!quickTechName) {
+          showToast("Please enter a Technician Name!", "error");
+          return;
+        }
+        // Automatically register this technician so they are available next time
+        tech = {
+          id: `TECH-${Date.now()}`,
+          code: `TECH-${String(technicians.length + 1).padStart(3, '0')}`,
+          name: quickTechName,
+          role: 'Technician',
+          department: 'Maintenance'
+        };
+        technicians.push(tech);
+        syncItemToCloud('technicians', tech);
+        if (document.getElementById('checkout-quick-tech-name')) {
+          document.getElementById('checkout-quick-tech-name').value = '';
+        }
+      }
+
       const machine = machines.find(m => m.id === machineId);
 
       if (!tech) {
-        showToast("Please select a Technician to issue to!", "error");
+        showToast("Please select or enter a Technician to issue to!", "error");
         return;
       }
 
@@ -4176,26 +4380,36 @@ service cloud.firestore {
           return;
         }
 
-        let totalPcs = 0;
+        let issuedPcs = 0;
+        const issuedSnapshot = [];
         boxTools.forEach(t => {
-          totalPcs += (t.totalQty || 0);
-          t.inUseQty = t.totalQty;
-          t.availableQty = 0;
-          syncItemToCloud('tools', t);
+          if (t.availableQty > 0) {
+            issuedSnapshot.push({ toolId: t.id, qty: t.availableQty });
+            issuedPcs += t.availableQty;
+            t.inUseQty = (t.inUseQty || 0) + t.availableQty;
+            t.availableQty = 0;
+            syncItemToCloud('tools', t);
+          }
         });
+
+        if (issuedPcs === 0) {
+          showToast(`No available tools left inside ${boxName} to issue!`, "error");
+          return;
+        }
 
         const newLoan = {
           id: `LN-BOX-${Date.now()}`,
           loanType: 'TOOLBOX',
           toolId: boxName,
           toolName: boxName,
-          specification: `Complete Toolbox (${boxTools.length} Tool Types / ${totalPcs} pcs)`,
+          specification: `Complete Toolbox (${issuedSnapshot.length} Tool Types / ${issuedPcs} pcs)`,
           toolbox: boxName,
+          issuedSnapshot: issuedSnapshot,
           techId: tech.id,
           techName: tech.name,
           machineId: machine ? machine.id : '-',
           machineName: machine ? machine.name : 'Workshop',
-          qty: totalPcs,
+          qty: issuedPcs,
           issueDate: issueDate,
           issueTime: issueTime,
           expectedReturnDate: expectedReturn,
@@ -4214,11 +4428,11 @@ service cloud.firestore {
           time: issueTime,
           type: 'TOOL-CHECKOUT',
           partId: boxName,
-          partName: `${boxName} (Complete Set - ${boxTools.length} Tool Types)`,
+          partName: `${boxName} (Complete Set - ${issuedSnapshot.length} Tool Types)`,
           sku: `TOOLBOX-${boxName.replace(/\s+/g, '')}`,
           cupboard: boxName,
           rack: 'Toolbox Station',
-          qty: totalPcs,
+          qty: issuedPcs,
           unitCost: 0,
           totalCost: 0,
           machineId: machine ? machine.id : '-',
@@ -4239,16 +4453,16 @@ service cloud.firestore {
         renderLogs();
         updateDashboardData();
 
-        showToast(`Issued complete ${boxName} (${totalPcs} tools) to ${tech.name}!`, "success");
+        showToast(`Issued complete ${boxName} (${issuedPcs} tools) to ${tech.name}!`, "success");
 
       } else {
-        // --- COMMON TOOL (TOOL-WISE) ISSUE ---
+        // --- INDIVIDUAL TOOL ISSUE (FROM COMMON TOOLS OR INSIDE ANY TOOLBOX) ---
         const toolId = document.getElementById('checkout-tool-id').value;
         const qty = parseInt(document.getElementById('checkout-qty').value) || 1;
         const tool = tools.find(t => t.id === toolId);
 
         if (!tool || tool.availableQty < qty) {
-          showToast("Cannot issue! Selected Common Tool is not available in requested quantity.", "error");
+          showToast("Cannot issue! Selected tool is not available in the requested quantity.", "error");
           return;
         }
 
@@ -4258,7 +4472,7 @@ service cloud.firestore {
 
         const newLoan = {
           id: `LN-TL-${Date.now()}`,
-          loanType: 'COMMON_TOOL',
+          loanType: 'INDIVIDUAL_TOOL',
           toolId: tool.id,
           toolName: tool.name,
           specification: tool.specification,
@@ -4274,7 +4488,7 @@ service cloud.firestore {
           returnDate: null,
           conditionOnReturn: null,
           status: 'Active',
-          notes: notes || `Common tool issued to ${tech.name}`
+          notes: notes || `Tool issued from ${tool.toolbox} to ${tech.name}`
         };
 
         toolLoans.push(newLoan);
@@ -4287,9 +4501,9 @@ service cloud.firestore {
           type: 'TOOL-CHECKOUT',
           partId: tool.id,
           partName: `${tool.name} (${tool.specification})`,
-          sku: `COMMON-TOOL`,
+          sku: tool.toolbox === 'Common Tools' ? 'COMMON-TOOL' : `TOOL-${tool.toolbox.replace(/\s+/g, '')}`,
           cupboard: tool.toolbox,
-          rack: 'Common Tool Rack',
+          rack: tool.toolbox === 'Common Tools' ? 'Common Tool Rack' : `${tool.toolbox} Compartment`,
           qty: qty,
           unitCost: 0,
           totalCost: 0,
@@ -4298,8 +4512,8 @@ service cloud.firestore {
           techId: tech.id,
           techName: tech.name,
           workOrder: `TL-ISSUE-${tool.id.slice(-4)}`,
-          purpose: 'Common Tool Issue (Tool-Wise)',
-          notes: notes || `Issued ${qty}x ${tool.name} (${tool.specification})`
+          purpose: `Individual Tool Issue (from ${tool.toolbox})`,
+          notes: notes || `Issued ${qty}x ${tool.name} (${tool.specification}) from ${tool.toolbox}`
         };
         transactions.push(newTx);
         syncItemToCloud('transactions', newTx);
@@ -4311,7 +4525,7 @@ service cloud.firestore {
         renderLogs();
         updateDashboardData();
 
-        showToast(`Issued ${qty}x ${tool.name} (${tool.specification}) to ${tech.name}.`, "success");
+        showToast(`Issued ${qty}x ${tool.name} (${tool.specification}) from ${tool.toolbox} to ${tech.name}.`, "success");
       }
     }
 
@@ -4321,7 +4535,7 @@ service cloud.firestore {
 
       document.getElementById('return-loan-id').value = loan.id;
       document.getElementById('return-tool-name').textContent = `${loan.toolName} (${loan.specification})`;
-      document.getElementById('return-tool-box').textContent = loan.loanType === 'TOOLBOX' ? `${loan.toolbox} (Complete Toolbox-Wise)` : `${loan.toolbox} (Tool-Wise)`;
+      document.getElementById('return-tool-box').textContent = loan.loanType === 'TOOLBOX' ? `${loan.toolbox} (Complete Toolbox)` : `${loan.toolbox} (Individual Tool)`;
       document.getElementById('return-tech-name').textContent = loan.techName;
       document.getElementById('return-machine-name').textContent = loan.machineName;
       document.getElementById('return-loan-qty').textContent = loan.loanType === 'TOOLBOX' ? `All ${loan.qty} pcs in ${loan.toolbox}` : loan.qty;
@@ -4342,15 +4556,25 @@ service cloud.firestore {
       const returnTime = new Date().toTimeString().slice(0,5);
 
       if (loan.loanType === 'TOOLBOX') {
-        // Restore all tools belonging to this Toolbox
-        const boxTools = tools.filter(t => t.toolbox === loan.toolbox);
-        boxTools.forEach(t => {
-          t.availableQty = t.totalQty;
-          t.inUseQty = 0;
-          syncItemToCloud('tools', t);
-        });
+        if (Array.isArray(loan.issuedSnapshot) && loan.issuedSnapshot.length > 0) {
+          loan.issuedSnapshot.forEach(snap => {
+            const t = tools.find(item => item.id === snap.toolId);
+            if (t) {
+              t.availableQty = Math.min(t.totalQty, (t.availableQty || 0) + snap.qty);
+              t.inUseQty = Math.max(0, (t.inUseQty || 0) - snap.qty);
+              syncItemToCloud('tools', t);
+            }
+          });
+        } else {
+          const boxTools = tools.filter(t => t.toolbox === loan.toolbox);
+          boxTools.forEach(t => {
+            t.availableQty = t.totalQty;
+            t.inUseQty = 0;
+            syncItemToCloud('tools', t);
+          });
+        }
       } else {
-        // Restore individual Common Tool
+        // Restore individual tool (into Common Tools or its assigned Toolbox)
         const tool = tools.find(t => t.id === loan.toolId);
         if (tool) {
           tool.availableQty = Math.min(tool.totalQty, tool.availableQty + loan.qty);
@@ -4376,9 +4600,9 @@ service cloud.firestore {
         type: 'TOOL-RETURN',
         partId: loan.toolId,
         partName: `${loan.toolName} (${loan.specification})`,
-        sku: loan.loanType === 'TOOLBOX' ? `TOOLBOX-${loan.toolbox.replace(/\s+/g, '')}` : `COMMON-TOOL`,
+        sku: loan.loanType === 'TOOLBOX' ? `TOOLBOX-${loan.toolbox.replace(/\s+/g, '')}` : `TOOL-${loan.toolbox.replace(/\s+/g, '')}`,
         cupboard: loan.toolbox,
-        rack: loan.loanType === 'TOOLBOX' ? 'Toolbox Station' : 'Common Tool Rack',
+        rack: loan.loanType === 'TOOLBOX' ? 'Toolbox Station' : `${loan.toolbox} Compartment`,
         qty: loan.qty,
         unitCost: 0,
         totalCost: 0,
@@ -4387,7 +4611,7 @@ service cloud.firestore {
         techId: loan.techId,
         techName: loan.techName,
         workOrder: `RECEIVE-${loan.id.slice(-4)}`,
-        purpose: loan.loanType === 'TOOLBOX' ? 'Toolbox-Wise Receive' : 'Common Tool Receive (Tool-Wise)',
+        purpose: loan.loanType === 'TOOLBOX' ? 'Toolbox-Wise Receive' : `Individual Tool Receive (into ${loan.toolbox})`,
         notes: `Condition: ${condition} ${notes ? '- ' + notes : ''}`
       };
       transactions.push(returnTx);
@@ -4400,7 +4624,229 @@ service cloud.firestore {
       renderLogs();
       updateDashboardData();
 
-      showToast(`Received ${loan.toolName} back from ${loan.techName}!`, "success");
+      showToast(`Received ${loan.toolName} back into ${loan.toolbox} from ${loan.techName}!`, "success");
+    }
+
+    // --- ALLOCATE / TRANSFER TOOLS TO TOOLBOXES ---
+    function openAllocateToolModal(preselectedToolId = null) {
+      const boxNames = getAllToolboxNames();
+
+      // Populate Source Filter
+      const srcFilter = document.getElementById('allocate-source-filter');
+      if (srcFilter) {
+        srcFilter.innerHTML = `<option value="ALL">All Locations & Toolboxes</option>` +
+          `<option value="Common Tools">Common Tools</option>` +
+          boxNames.map(b => `<option value="${b}">${b}</option>`).join('');
+      }
+
+      // Populate Target Toolbox Dropdown
+      const targetSelect = document.getElementById('allocate-target-box');
+      if (targetSelect) {
+        targetSelect.innerHTML = boxNames.map(b => `<option value="${b}">${b}</option>`).join('') +
+          `<option value="Common Tools">Common Tools</option>` +
+          `<option value="__NEW__">+ Create New Toolbox...</option>`;
+      }
+
+      const searchInput = document.getElementById('allocate-tool-search');
+      if (searchInput) searchInput.value = '';
+      toggleAllocateCustomBox(targetSelect ? targetSelect.value : '');
+
+      filterAllocateSourceTools();
+
+      if (preselectedToolId) {
+        const select = document.getElementById('allocate-tool-id');
+        if (select) {
+          select.value = preselectedToolId;
+          updateAllocateToolInfo();
+        }
+      }
+
+      openModal('allocateToolModal');
+    }
+
+    function filterAllocateSourceTools() {
+      const srcFilter = document.getElementById('allocate-source-filter')?.value || 'ALL';
+      const q = document.getElementById('allocate-tool-search')?.value.toLowerCase().trim() || '';
+      const select = document.getElementById('allocate-tool-id');
+      if (!select) return;
+
+      const currentVal = select.value;
+      const filtered = tools.filter(t => {
+        const matchesBox = srcFilter === 'ALL' || t.toolbox === srcFilter;
+        const matchesQuery = String(t.name || '').toLowerCase().includes(q) ||
+                             String(t.specification || '').toLowerCase().includes(q) ||
+                             String(t.toolbox || '').toLowerCase().includes(q);
+        return matchesBox && matchesQuery;
+      });
+
+      select.innerHTML = filtered.map(t => `
+        <option value="${t.id}">[${t.toolbox}] ${t.name} - ${t.specification} (Avail: ${t.availableQty} / Total: ${t.totalQty})</option>
+      `).join('');
+
+      if (filtered.some(t => t.id === currentVal)) {
+        select.value = currentVal;
+      }
+      updateAllocateToolInfo();
+    }
+
+    function updateAllocateToolInfo() {
+      const toolId = document.getElementById('allocate-tool-id')?.value;
+      const tool = tools.find(t => t.id === toolId);
+      const curBoxEl = document.getElementById('allocate-current-box');
+      const availEl = document.getElementById('allocate-avail-qty');
+      const totalEl = document.getElementById('allocate-total-qty');
+      const qtyInput = document.getElementById('allocate-qty');
+
+      if (tool) {
+        if (curBoxEl) curBoxEl.textContent = tool.toolbox;
+        if (availEl) availEl.textContent = tool.availableQty;
+        if (totalEl) totalEl.textContent = tool.totalQty;
+        if (qtyInput) {
+          const maxMove = tool.availableQty > 0 ? tool.availableQty : 1;
+          qtyInput.max = maxMove;
+          qtyInput.value = Math.min(parseInt(qtyInput.value) || 1, maxMove);
+        }
+      } else {
+        if (curBoxEl) curBoxEl.textContent = '-';
+        if (availEl) availEl.textContent = '0';
+        if (totalEl) totalEl.textContent = '0';
+      }
+    }
+
+    function toggleAllocateCustomBox(val) {
+      const wrap = document.getElementById('allocate-custom-box-wrap');
+      const input = document.getElementById('allocate-custom-box-input');
+      if (!wrap || !input) return;
+      if (val === '__NEW__') {
+        wrap.classList.remove('hidden');
+        input.required = true;
+        input.focus();
+      } else {
+        wrap.classList.add('hidden');
+        input.required = false;
+      }
+    }
+
+    function handleAllocateToolSubmit(e) {
+      e.preventDefault();
+      const toolId = document.getElementById('allocate-tool-id').value;
+      const qtyToMove = parseInt(document.getElementById('allocate-qty').value) || 1;
+      let targetBox = document.getElementById('allocate-target-box').value;
+      const customBox = document.getElementById('allocate-custom-box-input')?.value.trim();
+      const notes = document.getElementById('allocate-notes')?.value.trim();
+
+      if (targetBox === '__NEW__') {
+        if (!customBox) {
+          showToast("Please enter a name for the new Toolbox!", "error");
+          return;
+        }
+        targetBox = customBox;
+      }
+
+      const sourceTool = tools.find(t => t.id === toolId);
+      if (!sourceTool) {
+        showToast("Please select a valid tool to allocate!", "error");
+        return;
+      }
+
+      if (sourceTool.toolbox.toLowerCase() === targetBox.toLowerCase()) {
+        showToast(`Tool is already allocated to ${targetBox}!`, "amber");
+        return;
+      }
+
+      const oldToolbox = sourceTool.toolbox;
+
+      // Special case: if tool has 0 totalQty (zero-stock placeholder), move the record directly
+      if (sourceTool.totalQty === 0) {
+        sourceTool.toolbox = targetBox;
+        syncItemToCloud('tools', sourceTool);
+      } else {
+        if (qtyToMove > sourceTool.availableQty) {
+          showToast(`Cannot allocate ${qtyToMove}! Only ${sourceTool.availableQty} available (not currently issued out).`, "error");
+          return;
+        }
+
+        // Check if an identical tool + specification already exists in the target toolbox
+        const existingTargetTool = tools.find(t =>
+          t.id !== sourceTool.id &&
+          t.toolbox.toLowerCase() === targetBox.toLowerCase() &&
+          t.name.toLowerCase() === sourceTool.name.toLowerCase() &&
+          String(t.specification).toLowerCase() === String(sourceTool.specification).toLowerCase()
+        );
+
+        if (qtyToMove === sourceTool.totalQty && (sourceTool.inUseQty || 0) === 0) {
+          // Moving the entire tool entry
+          if (existingTargetTool) {
+            existingTargetTool.totalQty += qtyToMove;
+            existingTargetTool.availableQty += qtyToMove;
+            syncItemToCloud('tools', existingTargetTool);
+
+            tools = tools.filter(t => t.id !== sourceTool.id);
+            deleteItemFromCloud('tools', sourceTool.id);
+          } else {
+            sourceTool.toolbox = targetBox;
+            syncItemToCloud('tools', sourceTool);
+          }
+        } else {
+          // Moving partial quantity
+          sourceTool.totalQty -= qtyToMove;
+          sourceTool.availableQty -= qtyToMove;
+          syncItemToCloud('tools', sourceTool);
+
+          if (existingTargetTool) {
+            existingTargetTool.totalQty += qtyToMove;
+            existingTargetTool.availableQty += qtyToMove;
+            syncItemToCloud('tools', existingTargetTool);
+          } else {
+            const allocatedTool = {
+              id: `TL-ALC-${Date.now()}`,
+              name: sourceTool.name,
+              specification: sourceTool.specification,
+              toolbox: targetBox,
+              totalQty: qtyToMove,
+              availableQty: qtyToMove,
+              inUseQty: 0
+            };
+            tools.push(allocatedTool);
+            syncItemToCloud('tools', allocatedTool);
+          }
+        }
+      }
+
+      // Record in transaction logs
+      const today = new Date().toISOString().split('T')[0];
+      const nowTime = new Date().toTimeString().slice(0,5);
+      const allocTx = {
+        id: `TX-ALC-${Date.now()}`,
+        date: today,
+        time: nowTime,
+        type: 'RECEIVE',
+        partId: sourceTool.id,
+        partName: `${sourceTool.name} (${sourceTool.specification})`,
+        sku: `TOOL-ALLOC`,
+        cupboard: targetBox,
+        rack: `From ${oldToolbox}`,
+        qty: qtyToMove,
+        unitCost: 0,
+        totalCost: 0,
+        machineId: '-',
+        machineName: '-',
+        techId: '-',
+        techName: 'Store Allocation',
+        workOrder: `ALLOC-${Date.now().toString().slice(-4)}`,
+        purpose: `Tool Allocated: ${oldToolbox} → ${targetBox}`,
+        notes: notes || `Allocated ${qtyToMove}x ${sourceTool.name} (${sourceTool.specification}) from ${oldToolbox} to ${targetBox}`
+      };
+      transactions.push(allocTx);
+      syncItemToCloud('transactions', allocTx);
+
+      saveState();
+      closeModal('allocateToolModal');
+      populateToolDropdowns();
+      renderTools();
+      renderLogs();
+
+      showToast(`Allocated ${qtyToMove}x ${sourceTool.name} (${sourceTool.specification}) from ${oldToolbox} to ${targetBox}!`, "success");
     }
 
     function toggleCustomToolboxInput(val) {
@@ -5038,11 +5484,18 @@ service cloud.firestore {
 
     // --- MODAL CONTROLS ---
     function openModal(modalId) {
-      document.getElementById(modalId).classList.remove('hidden');
+      if (modalId === 'issueModal' || modalId === 'receiveModal') {
+        populateDropdowns();
+      } else if (modalId === 'toolCheckoutModal') {
+        populateToolDropdowns();
+      }
+      const el = document.getElementById(modalId);
+      if (el) el.classList.remove('hidden');
     }
 
     function closeModal(modalId) {
-      document.getElementById(modalId).classList.add('hidden');
+      const el = document.getElementById(modalId);
+      if (el) el.classList.add('hidden');
     }
 
     // --- CSV EXPORT ---
