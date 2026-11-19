@@ -1728,7 +1728,7 @@
           </div>
           <div>
             <h3 class="font-bold text-slate-100 text-lg">Database Connection & Rules</h3>
-            <p class="text-xs text-slate-400" id="db-modal-status-text">Project: sml-otd (Realtime Sync Active)</p>
+            <p class="text-xs text-slate-400" id="db-modal-status-text">Project: mmt-inventory-429ea (Realtime Sync Active)</p>
           </div>
         </div>
         <button onclick="closeModal('dbRulesModal')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -1736,12 +1736,12 @@
 
       <div class="space-y-3 text-xs text-slate-300">
         <p class="leading-relaxed">
-          If your Firebase project (<code class="text-cyan-300">sml-otd</code>) shows <strong>Missing or insufficient permissions</strong>, your Firebase Console security rules are currently blocking client read/write access. While locked, this dashboard automatically syncs in real-time across browser tabs locally.
+          If your Firebase project (<code class="text-cyan-300">mmt-inventory-429ea</code>) shows <strong>Missing or insufficient permissions</strong>, your Firebase Console security rules are currently blocking client read/write access. While locked, this dashboard automatically syncs in real-time across browser tabs locally.
         </p>
 
         <div class="bg-slate-900 border border-slate-700 rounded-xl p-3 space-y-2">
           <div class="flex items-center justify-between">
-            <span class="font-semibold text-amber-300"><i class="fa-solid fa-bolt mr-1"></i> Option 1: Firebase Realtime Database Rules (sml-otd-default-rtdb)</span>
+            <span class="font-semibold text-amber-300"><i class="fa-solid fa-bolt mr-1"></i> Option 1: Firebase Realtime Database Rules</span>
           </div>
           <pre class="bg-slate-950 p-2.5 rounded-lg text-[11px] font-mono text-emerald-400 overflow-x-auto">{
   "rules": {
@@ -1784,16 +1784,15 @@ service cloud.firestore {
     import { getDatabase, ref, set, get, remove, onValue } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
     import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Firebase Credentials provided for project sml-otd
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-      apiKey: "AIzaSyChqHBCQLazakNfz48641ODxgRiz2FKk8U",
-      authDomain: "sml-otd.firebaseapp.com",
-      databaseURL: "https://sml-otd-default-rtdb.firebaseio.com",
-      projectId: "sml-otd",
-      storageBucket: "sml-otd.firebasestorage.app",
-      messagingSenderId: "710493386591",
-      appId: "1:710493386591:web:b1dba9e0a2f341ebf5a8ea",
-      measurementId: "G-HD05WRNQFK"
+    // Firebase Credentials provided for project mmt-inventory-429ea
+    const firebaseConfig = {
+      apiKey: "AIzaSyBM1HjZqo3oQSKnn1fsFHP6qRb0UTmv6rs",
+      authDomain: "mmt-inventory-429ea.firebaseapp.com",
+      projectId: "mmt-inventory-429ea",
+      storageBucket: "mmt-inventory-429ea.firebasestorage.app",
+      messagingSenderId: "83045661919",
+      appId: "1:83045661919:web:7f0489e833e96ba77b3d6a",
+      measurementId: "G-88JMSF8BH8"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -1807,7 +1806,7 @@ service cloud.firestore {
     } catch (e) {
       // RTDB optional fallback
     }
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'sml-otd-app';
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'mmt-inventory-429ea';
 
     // Expose Firebase DB, RTDB & Auth globally
     window.firebaseApp = app;
@@ -2844,7 +2843,7 @@ service cloud.firestore {
     window.setupRealtimeListeners = async function() {
       const isClearedLocal = localStorage.getItem('maint_cleared') === 'true';
 
-      // 1. Try Firebase Realtime Database (RTDB: sml-otd-default-rtdb) first if configured
+      // 1. Try Firebase Realtime Database (RTDB) first if configured
       if (window.firebaseRtdb && window.rtdbApi) {
         const { ref, get, set, onValue } = window.rtdbApi;
         const rtdb = window.firebaseRtdb;
@@ -2853,7 +2852,7 @@ service cloud.firestore {
         try {
           const metaSnap = await get(ref(rtdb, `${basePath}/system_meta/config`));
           window.dbMode = 'RTDB';
-          updateDbStatusBadge('RTDB', 'Connected to Firebase Realtime Database (sml-otd-default-rtdb)');
+          updateDbStatusBadge('RTDB', 'Connected to Firebase Realtime Database (mmt-inventory-429ea)');
 
           if (!metaSnap.exists() && !isClearedLocal) {
             await set(ref(rtdb, `${basePath}/system_meta/config`), { initialized: true, isCleared: false, createdAt: new Date().toISOString() });
@@ -2950,7 +2949,7 @@ service cloud.firestore {
           const metaSnap = await getDoc(metaDocRef);
 
           window.dbMode = 'FIRESTORE';
-          updateDbStatusBadge('FIRESTORE', 'Connected to Cloud Firestore (sml-otd)');
+          updateDbStatusBadge('FIRESTORE', 'Connected to Cloud Firestore (mmt-inventory-429ea)');
 
           if (!metaSnap.exists() && !isClearedLocal) {
             await setDoc(metaDocRef, { initialized: true, isCleared: false, createdAt: new Date().toISOString() });
